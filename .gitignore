@@ -1,0 +1,20 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Cache
+*.log
+*.cache
+.pytest_cache/
+
+# Others
+REF/
+api_extractions/
