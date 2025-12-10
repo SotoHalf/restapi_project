@@ -1,0 +1,86 @@
+from abc import ABC, abstractmethod
+from curl_cffi import requests
+from datetime import datetime
+from pathlib import Path
+import pandas as pd
+import time
+
+from etl.utils.config_loader import Config
+
+# ABSTRACT CLASS
+class BaseExtractor(ABC):
+
+    def __init__(self, api_name: str):
+        self.api_name = api_name
+        self.today = datetime.now().strftime(Config.get_date_format())
+        self.base_path = Path(f"{Config.get_export_path()}/{api_name}")
+        # path concatenation
+        self._raw_path = self.base_path / "raw"
+        self._clean_path = self.base_path / "clean"
+        # create in case it doesn't exists
+        self._raw_path.mkdir(parents=True, exist_ok=True)
+        self._clean_path.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def raw_path(self):
+        return self._raw_path
+
+    @property
+    def clean_path(self):
+        return self._clean_path
+
+    def get(self, url, headers=None, retries=3, retry_delay=5, **kwargs):
+        #curl_cffi enables simulate a true navegator
+        for attempt in range(1, retries + 1):
+            try:
+                resp = requests.get(
+                    url,
+                    headers=headers or {},
+                    impersonate="chrome101",
+                    **kwargs
+                )
+                resp.raise_for_status()
+                return resp.json()
+            
+            except requests.exceptions.RequestException as e:
+                self.log_print(f"Attempt {attempt}/{retries} failed: {e}")
+                if attempt == retries:
+                    raise
+                time.sleep(retry_delay)
+            
+            except Exception as e:
+                self.log_print(f"Unexpected error: {e}")
+                if attempt == retries:
+                    raise
+                time.sleep(retry_delay)
+
+    def log_print(self, message):
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f"[{now}] [{self.api_name}] {message}")
+
+    @abstractmethod
+    def extract_raw(self) -> pd.DataFrame:
+        # expects to return a parsed DataFrame (pandas)
+        pass
+
+    @abstractmethod
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        # expects to return a parsed DataFrame (pandas) 
+        # but with the data clean
+        pass
+
+    def save_df(self, df, path: Path):
+        df.to_csv(path, index=False)
+
+    def run(self):
+        # Extract
+        df_raw = self.extract_raw()
+        raw_file = self._raw_path / f"{self.today}.csv"
+        self.save_df(df_raw, raw_file)
+
+        # Transform
+        df_clean = self.transform(df_raw)
+        clean_file = self._clean_path / f"{self.today}.csv"
+        self.save_df(df_clean, clean_file)
+
+        return raw_file, clean_file

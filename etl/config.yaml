@@ -1,0 +1,18 @@
+etl:
+  export_path: "api_extractions"
+  date_format: "%Y-%m-%d"
+
+mongo:
+  uri: "mongodb://localhost:27017/"
+  database: "db"
+
+apis:
+  themealdb:
+    enabled: true
+    extractor: "etl.extract.themealdb_extractor.TheMealDBExtractor"
+    description: "Cooking recipes"
+
+  openfoodfacts:
+    enabled: false
+    extractor: "etl.extract.openfoodfacts_extractor.OpenFoodFactsExtractor"
+    description: "Products data (Nutrition)"
