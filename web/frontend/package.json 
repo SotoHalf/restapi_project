@@ -1,0 +1,13 @@
+{
+  "name": "foodhealth-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tailwindcss -i ./src/input.css -o ./static/css/output.css --watch",
+    "build": "tailwindcss -i ./src/input.css -o ./static/css/output.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.3.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0"
+  }
+}
