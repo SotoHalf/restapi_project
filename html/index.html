@@ -1,0 +1,286 @@
+<!-- AI GENERATED FILE. Feel free to generate your own with your LLM of choice. -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI Auth Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-slate-200 font-sans min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-slate-800 border-b border-slate-700 shadow-lg">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-shield-halved text-emerald-400 text-2xl"></i>
+                <h1 class="text-xl font-bold tracking-wide text-white">Auth Node Registry</h1>
+            </div>
+            <div id="authStatus" class="text-sm text-slate-400">
+                Not logged in
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-6xl mx-auto px-4 py-10 w-full grid grid-cols-1 lg:grid-cols-2 gap-12">
+
+        <!-- Left Column: Auth Forms -->
+        <div class="space-y-8">
+
+            <!-- Login Form -->
+            <div id="loginCard" class="bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700">
+                <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                    <i class="fa-solid fa-right-to-bracket text-emerald-400"></i> Login
+                </h2>
+                <form id="loginForm" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">Username</label>
+                        <input type="text" id="loginUsername" required
+                            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                            placeholder="Enter username">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">Password</label>
+                        <input type="password" id="loginPassword" required
+                            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                            placeholder="Enter password">
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg transition shadow-lg shadow-emerald-500/20 flex justify-center items-center gap-2">
+                        <span>Sign In</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Register Form -->
+            <div class="bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700">
+                <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                    <i class="fa-solid fa-user-plus text-blue-400"></i> Register Node
+                </h2>
+                <form id="registerForm" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">New Username</label>
+                        <input type="text" id="regUsername" required
+                            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                            placeholder="Choose username">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">New Password</label>
+                        <input type="password" id="regPassword" required
+                            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                            placeholder="Choose password">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">Email (Optional)</label>
+                        <input type="email" id="regEmail"
+                            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                            placeholder="contact@example.com">
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition shadow-lg shadow-blue-500/20">
+                        Create Account
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Dashboard (Hidden until logged in) -->
+        <div class="space-y-8">
+
+            <!-- Console Output -->
+            <div
+                class="bg-black rounded-2xl shadow-2xl overflow-hidden border border-slate-700 flex flex-col h-full min-h-[500px]">
+                <div class="bg-slate-800 px-4 py-2 flex items-center gap-2 border-b border-slate-700">
+                    <div class="flex gap-1.5">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    </div>
+                    <span class="text-xs text-slate-400 font-mono ml-2">system_console.log</span>
+                </div>
+                <div id="consoleOutput"
+                    class="p-6 font-mono text-sm text-green-400 overflow-y-auto flex-grow space-y-2">
+                    <div class="opacity-50">> System initialized...</div>
+                    <div class="opacity-50">> Waiting for authentication...</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="p-4 bg-slate-900 border-t border-slate-800 grid grid-cols-2 gap-4">
+                    <button onclick="fetchMe()" id="btnMe" disabled
+                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 px-4 rounded border border-slate-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-id-card mr-2"></i> /users/me
+                    </button>
+                    <button onclick="fetchStatus()" id="btnStatus" disabled
+                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 px-4 rounded border border-slate-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-server mr-2"></i> /system/status
+                    </button>
+                    <button onclick="logout()" id="btnLogout" disabled
+                        class="col-span-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 py-2 px-4 rounded border border-red-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        let token = localStorage.getItem('access_token');
+
+        function log(msg, type = 'info') {
+            const consoleDiv = document.getElementById('consoleOutput');
+            const line = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+
+            if (type === 'error') line.className = 'text-red-400';
+            else if (type === 'success') line.className = 'text-emerald-400 font-bold';
+            else line.className = 'text-slate-300';
+
+            line.innerHTML = `<span class="opacity-50 mr-2">[${timestamp}]</span> ${msg}`;
+            consoleDiv.appendChild(line);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        function updateUI() {
+            const isLoggedIn = !!token;
+            document.getElementById('btnMe').disabled = !isLoggedIn;
+            document.getElementById('btnStatus').disabled = !isLoggedIn;
+            document.getElementById('btnLogout').disabled = !isLoggedIn;
+
+            const statusEl = document.getElementById('authStatus');
+            if (isLoggedIn) {
+                statusEl.innerHTML = '<span class="text-emerald-400 font-bold"><i class="fa-solid fa-circle text-[10px] mr-1"></i> Connected</span>';
+                document.getElementById('loginCard').classList.add('opacity-50', 'pointer-events-none');
+            } else {
+                statusEl.innerHTML = 'Not logged in';
+                document.getElementById('loginCard').classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        // --- AUTHENTICATION ---
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            log(`> Attempting login for user: ${username}...`);
+
+            const formData = new URLSearchParams();
+            formData.append('username', username);
+            formData.append('password', password);
+
+            try {
+                const res = await fetch('/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                if (!res.ok) throw new Error('Login failed');
+
+                const data = await res.json();
+                token = data.access_token;
+                localStorage.setItem('access_token', token);
+
+                log('> Login successful! Token received.', 'success');
+                updateUI();
+                document.getElementById('loginForm').reset();
+            } catch (err) {
+                log(`> Error: ${err.message}`, 'error');
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            const email = document.getElementById('regEmail').value;
+
+            log(`> Registering user: ${username}...`);
+
+            try {
+                const res = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, email })
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.detail || 'Registration failed');
+                }
+
+                const data = await res.json();
+                log(`> Registration successful for ID: ${data._id || 'Unknown'}`, 'success');
+                document.getElementById('registerForm').reset();
+            } catch (err) {
+                log(`> Error: ${err.message}`, 'error');
+            }
+        });
+
+        function logout() {
+            token = null;
+            localStorage.removeItem('access_token');
+            log('> Logged out.');
+            updateUI();
+        }
+
+        // --- PROTECTED ENDPOINTS ---
+
+        async function fetchMe() {
+            log('> GET /users/me ...');
+            try {
+                const res = await fetch('/users/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                log(`> Response: ${JSON.stringify(data, null, 2)}`);
+            } catch (err) {
+                log(`> Error: ${err.message}`, 'error');
+            }
+        }
+
+        async function fetchStatus() {
+            log('> GET /system/status ...');
+            try {
+                const res = await fetch('/system/status', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                log(`> Response: ${JSON.stringify(data, null, 2)}`);
+            } catch (err) {
+                log(`> Error: ${err.message}`, 'error');
+            }
+        }
+
+        // Init
+        if (token) {
+            log('> Found existing session token.');
+            updateUI();
+        }
+    </script>
+</body>
+
+</html>
