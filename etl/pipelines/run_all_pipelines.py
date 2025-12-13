@@ -7,7 +7,5 @@ def run_all():
     for pipe in pipelines:
         pipe()
 
-    # ADD LOAD PROCESS
-
 if __name__ == "__main__":
     run_all()

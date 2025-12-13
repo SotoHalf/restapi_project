@@ -2,10 +2,6 @@ etl:
   export_path: "api_extractions"
   date_format: "%Y-%m-%d"
 
-mongo:
-  uri: "mongodb://localhost:27017/"
-  database: "db"
-
 apis:
   themealdb:
     enabled: true

@@ -54,7 +54,7 @@ class TheMealDBExtractor(BaseExtractor):
         list_recipies_by_country = {}
 
         for i, cc in enumerate(countries, start=1):
-            self.log_print(f"Retrieving recipes for country: {cc} - {i}/{len(countries)} - {round(float(i)/len(countries)*100)}%")
+            self.log(f"Retrieving recipes for country: {cc} - {i}/{len(countries)} - {round(float(i)/len(countries)*100)}%")
             url_recipies = "www.themealdb.com/api/json/v1/1/filter.php"
             params = {
                 'a': cc
@@ -95,17 +95,22 @@ class TheMealDBExtractor(BaseExtractor):
         data_by_country = self.get_data_by_country()
         rows = []
         for i, (cc, meals) in enumerate(data_by_country.items(), start=1):
-            self.log_print(
+            self.log(
                 f"Retrieving meals data for country: {cc} - {i}/{len(data_by_country)}"
             )
             for meal in meals:
                 id_meal = meal.get('idMeal',None)
                 if not id_meal: continue
+                
+                #Check if already exists
+                if self.exists_in_db(f"{self.api_name}_raw",id_meal): 
+                    continue
+
                 meal_data = self.get_data_by_id(id_meal)
 
                 if not meal_data: continue
                 row = {
-                    "mealID" : id_meal,
+                    "_id" : id_meal,
                     "country" : cc,
                     "name" : meal["strMeal"],
                     "imageURL" : meal["strMealThumb"],
@@ -117,7 +122,7 @@ class TheMealDBExtractor(BaseExtractor):
                 rows.append(row)
 
         fieldnames = [
-            "mealID",
+            "_id",
             "name",
             "country",
             "imageURL",
@@ -135,17 +140,31 @@ class TheMealDBExtractor(BaseExtractor):
         def extract_num(tokens):
             for t in tokens:
                 t = t.strip()
+
+                try:
+                    return float(t)
+                except ValueError:
+                    pass
+                
                 # support for fractions "1/2"
                 if '/' in t:
                     try:
                         numerator, denominator = t.split('/')
                         return float(numerator) / float(denominator)
                     except (ValueError, ZeroDivisionError):
-                        return 0
-                try:
-                    return float(t)
-                except ValueError:
-                    return 0
+                        pass                
+            
+                num = 0
+                for n in t:
+                    try:
+                        n = float(n)
+                        num = num*10 + n
+                    except ValueError:
+                        break
+
+                return float(num)
+                
+            return 0
                 
         def remove_nums(tokens):
             news_tokens = []
@@ -161,8 +180,8 @@ class TheMealDBExtractor(BaseExtractor):
                 
         tokens = measure.split()
         num = extract_num(tokens)
-
         tokens = remove_nums(tokens)
+
         clean_tokens = []
         for t in tokens:
             if t.lower() in TheMealDBExtractor.CONVERSION_TO_GRAMS.keys():
@@ -180,9 +199,9 @@ class TheMealDBExtractor(BaseExtractor):
         return num, units
     
     def normalize_to_grams(self, measure):
-        if not measure: return ''
         num, units = self.get_num_and_units(measure)
-        final_value = f'{num*TheMealDBExtractor.CONVERSION_TO_GRAMS[units.lower()]}'
+        value = num*TheMealDBExtractor.CONVERSION_TO_GRAMS[units.lower()]
+        final_value = f'{round(value,2)}'
         return final_value
     
     def transform(self, df):
@@ -194,7 +213,38 @@ class TheMealDBExtractor(BaseExtractor):
             if col in df.columns:
                 df[col] = df[col].fillna('')
                 df[col] = df[col].apply(self.normalize_to_grams)
-        
+
+
+        # create pairs, we want mealId+Ingridient
+        rows = []
+        for _, row in df.iterrows():
+            meal_id = row["_id"]
+            name = row["name"]
+            country = row["country"]
+            image_url = row["imageURL"]
+
+            for i in range(1, TheMealDBExtractor.MAX_INGREDIENTS + 1):
+                ingredient = row.get(f"ingredient_{i}")
+                measure = row.get(f"measure_{i}")
+
+                if pd.isna(ingredient) or ingredient == "":
+                    continue
+
+                #generated_id = f"{meal_id}_{i}{meal_id + len(str(ingredient))}"
+                generated_id = f"{meal_id}_{i}{str(int(meal_id) + len(str(ingredient)))}"
+
+                rows.append({
+                    "_id": generated_id,
+                    "mealID": meal_id,
+                    "name": name,
+                    "country": country,
+                    "imageURL": image_url,
+                    "ingredient": ingredient,
+                    "measure_g": measure
+                })
+
+        df = pd.DataFrame(rows)
+
         return df
 
 if __name__ == "__main__":
@@ -207,9 +257,10 @@ if __name__ == "__main__":
     # TEST TRANSFORM
     """
     from datetime import datetime
-    _date = datetime(2025,12,9)
+    _date = datetime(2025,12,13)
     df = pd.read_csv(extractor.raw_path / f"{_date.strftime("%Y-%m-%d")}.csv")
     df_clean = extractor.transform(df)
     extractor.save_df(df_clean, extractor.clean_path / f"{_date.strftime("%Y-%m-%d")}.csv")
     """
+    
     #www.themealdb.com/api/json/v1/1/lookup.php?i=52772

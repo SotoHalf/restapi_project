@@ -10,3 +10,6 @@ dotenv
 certifi
 APScheduler
 jinja2
+pandas
+PyYAML
+curl-cffi

@@ -6,13 +6,15 @@ import pandas as pd
 import time
 
 from etl.utils.config_loader import Config
+from etl.utils.log_etl import log_write
+import mongo.cli as mongo_cli
 
 # ABSTRACT CLASS
 class BaseExtractor(ABC):
 
     def __init__(self, api_name: str):
         self.api_name = api_name
-        self.today = datetime.now().strftime(Config.get_date_format())
+        self.today = f"{datetime.now().strftime(Config.get_date_format())}_{int(time.time())}"
         self.base_path = Path(f"{Config.get_export_path()}/{api_name}")
         # path concatenation
         self._raw_path = self.base_path / "raw"
@@ -21,6 +23,10 @@ class BaseExtractor(ABC):
         self._raw_path.mkdir(parents=True, exist_ok=True)
         self._clean_path.mkdir(parents=True, exist_ok=True)
 
+    def exists_in_db(self, collection, _id):
+        mongo_sync = mongo_cli.get_mongo_manager()
+        return mongo_sync.exists_in_db(collection, int(_id))
+    
     @property
     def raw_path(self):
         return self._raw_path
@@ -43,20 +49,19 @@ class BaseExtractor(ABC):
                 return resp.json()
             
             except requests.exceptions.RequestException as e:
-                self.log_print(f"Attempt {attempt}/{retries} failed: {e}")
+                self.log(f"Attempt {attempt}/{retries} failed: {e}")
                 if attempt == retries:
                     raise
                 time.sleep(retry_delay)
             
             except Exception as e:
-                self.log_print(f"Unexpected error: {e}")
+                self.log(f"Unexpected error: {e}")
                 if attempt == retries:
                     raise
                 time.sleep(retry_delay)
 
-    def log_print(self, message):
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[{now}] [{self.api_name}] {message}")
+    def log(self, message):
+        log_write(self.api_name,message)
 
     @abstractmethod
     def extract_raw(self) -> pd.DataFrame:
@@ -76,11 +81,15 @@ class BaseExtractor(ABC):
         # Extract
         df_raw = self.extract_raw()
         raw_file = self._raw_path / f"{self.today}.csv"
-        self.save_df(df_raw, raw_file)
+        if df_raw is not None:
+            if not df_raw.empty:
+                self.save_df(df_raw, raw_file)
 
         # Transform
         df_clean = self.transform(df_raw)
         clean_file = self._clean_path / f"{self.today}.csv"
-        self.save_df(df_clean, clean_file)
+        if df_clean is not None:
+            if not df_clean.empty:
+                self.save_df(df_clean, clean_file)
 
         return raw_file, clean_file
