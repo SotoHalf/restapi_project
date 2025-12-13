@@ -20,6 +20,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    role: Optional[str] = "role_user"  
 
 class UserResponse(UserBase):
     # Map MongoDB's '_id' to 'id' in the JSON response

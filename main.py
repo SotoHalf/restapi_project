@@ -95,3 +95,23 @@ async def read_root(request: Request):
             "<h1>Error: index.html not found or could not be rendered.</h1>", 
             status_code=404
         )
+
+@app.get("/home", response_class=HTMLResponse)
+async def get_home(request: Request):
+    """
+    Serves home.html after login
+    """
+    try:
+        return templates.TemplateResponse("home.html", {"request": request})
+    except Exception as e:
+        return HTMLResponse(f"<h1>Error loading home.html: {e}</h1>", status_code=404)
+
+@app.get("/admin", response_class=HTMLResponse)
+async def get_admin(request: Request):
+    """
+    Serves admin.html for admins
+    """
+    try:
+        return templates.TemplateResponse("admin.html", {"request": request})
+    except Exception as e:
+        return HTMLResponse(f"<h1>Error loading admin.html: {e}</h1>", status_code=404)
