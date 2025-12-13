@@ -10,12 +10,13 @@ router = APIRouter()
 @router.post("/register", response_model=schemas.UserResponse)
 async def register_user(user: schemas.UserCreate, db = Depends(database.get_db)):
     """
-    Register a new Compute Node or Admin.
-    Note the 'async def' and 'await' usage.
+    Register a new user (regular or admin).
+    The role field is optional; defaults to 'role_user'.
     """
     logger = logging.getLogger(__name__)
     logger.info(f"Registering user: {user.username}")
-    # Check if user exists
+
+    # Check if user already exists
     existing_user = await db["users"].find_one({"username": user.username})
     if existing_user:
         logger.warning(f"Registration failed: Username {user.username} already exists")
@@ -23,10 +24,11 @@ async def register_user(user: schemas.UserCreate, db = Depends(database.get_db))
     
     hashed_password = auth.get_password_hash(user.password)
     
-    # Create User Dict (MongoDB Document)
+    # Create User Dict (MongoDB Document), including role
     user_doc = models.UserInDB(
         username=user.username,
-        hashed_password=hashed_password
+        hashed_password=hashed_password,
+        role=user.role or "role_user"  # <-- aquí se asigna el rol
     ).model_dump()
     
     # Insert into MongoDB
@@ -35,7 +37,7 @@ async def register_user(user: schemas.UserCreate, db = Depends(database.get_db))
     # Fetch the created user to return it (to get the generated _id)
     created_user = await db["users"].find_one({"_id": new_user.inserted_id})
     
-    logger.info(f"User registered successfully: {user.username}")
+    logger.info(f"User registered successfully: {user.username} with role {created_user.get('role')}")
     return created_user
 
 @router.post("/token", response_model=schemas.Token)
