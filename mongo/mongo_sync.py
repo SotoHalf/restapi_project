@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 import logging
+from pymongo.errors import BulkWriteError
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +13,14 @@ class MongoLoaderSync:
     def insert(self, records, collection):
         if not records:
             return
-        self.db[collection].insert_many(records, ordered=False)
-        logger.info(f"[sync] Inserted {len(records)} docs into {collection}")
+        try:
+            self.db[collection].insert_many(records, ordered=False)
+            logger.info(f"[sync] Inserted {len(records)} docs into {collection}")
+        except BulkWriteError as e:
+            # Filtra los errores de duplicado
+            dup_errors = [err for err in e.details['writeErrors'] if err['code'] == 11000]
+            inserted_count = len(records) - len(dup_errors)
+            logger.info(f"[sync] Inserted {inserted_count} docs into {collection} (duplicates ignored)")
 
     def exists_in_db(self, collection, _id):
         doc = self.db[collection].find_one({"_id": _id})
