@@ -35,7 +35,7 @@ class BaseExtractor(ABC):
     def clean_path(self):
         return self._clean_path
 
-    def get(self, url, headers=None, retries=3, retry_delay=5, **kwargs):
+    def get(self, url, headers=None, retries=3,  timeout=30000, retry_delay=5, **kwargs):
         #curl_cffi enables simulate a true navegator
         for attempt in range(1, retries + 1):
             try:
@@ -43,6 +43,7 @@ class BaseExtractor(ABC):
                     url,
                     headers=headers or {},
                     impersonate="chrome101",
+                    timeout=timeout,
                     **kwargs
                 )
                 resp.raise_for_status()
@@ -53,12 +54,23 @@ class BaseExtractor(ABC):
                 if attempt == retries:
                     raise
                 time.sleep(retry_delay)
+
+            except requests.exceptions.Timeout as e:
+                self.log(
+                    f"Timeout on attempt {attempt}/{retries} "
+                    f"after {timeout}s: {e}"
+                )
+                if attempt == retries:
+                    raise
+                time.sleep(retry_delay)
             
             except Exception as e:
                 self.log(f"Unexpected error: {e}")
                 if attempt == retries:
                     raise
                 time.sleep(retry_delay)
+
+        return None
 
     def log(self, message):
         log_write(self.api_name,message)

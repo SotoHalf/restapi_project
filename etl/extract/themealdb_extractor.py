@@ -45,7 +45,7 @@ class TheMealDBExtractor(BaseExtractor):
         params = {
             'a': 'list'
         }
-        countries_raw = self.get(url_list_countries, params=params)
+        countries_raw = self.get(url_list_countries, params=params) or []
         countries = [
             country.get('strArea')
             for country in countries_raw.get('meals',[])
@@ -59,7 +59,7 @@ class TheMealDBExtractor(BaseExtractor):
             params = {
                 'a': cc
             }
-            recepies_raw = self.get(url_recipies, params=params)
+            recepies_raw = self.get(url_recipies, params=params) or []
             for meals in recepies_raw.get('meals',[]):
                 list_recipies_by_country.setdefault(cc,[]).append(meals)
             
@@ -72,7 +72,7 @@ class TheMealDBExtractor(BaseExtractor):
         }
         url_data = "https://www.themealdb.com/api/json/v1/1/lookup.php"
 
-        meal_data = self.get(url_data, params=params)
+        meal_data = self.get(url_data, params=params) or []
         meal = meal_data.get('meals',[{}])[0]
 
         if meal:
