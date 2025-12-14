@@ -23,7 +23,10 @@ class MongoLoaderSync:
             logger.info(f"[sync] Inserted {inserted_count} docs into {collection} (duplicates ignored)")
 
     def exists_in_db(self, collection, _id):
-        doc = self.db[collection].find_one({"_id": _id})
+        try:
+            doc = self.db[collection].find_one({"_id": _id})
+        except Exception:
+            return False
         return doc is not None
 
     def get_client(self):
