@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Food Analytics – Health Map</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+    --primary: #10b981;
+    --primary-dark: #059669;
+    --primary-light: #d1fae5;
+}
+
+body {
+    background: linear-gradient(135deg,
+        #0c4a33 0%,
+        #065f46 30%,
+        #064e3b 70%,
+        #022c22 100%);
+    font-family: 'Inter', system-ui, sans-serif;
+    color: white;
+}
+
+.glass {
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.05) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.glass-strong {
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.08) 100%);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.gradient-text {
+    background: linear-gradient(90deg, #10b981, #34d399, #10b981);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.card-hover { transition: all 0.3s ease; }
+.card-hover:hover { transform: translateY(-5px); }
+
+#healthMap { height: 500px; border-radius: 12px; }
+.leaflet-container { background: transparent !important; }
+.leaflet-popup-content { color: #1f2937; }
+</style>
+</head>
+
+<body class="min-h-screen p-4 md:p-8">
+
+<!-- Main container -->
+<main class="max-w-7xl mx-auto space-y-8">
+
+    <!-- Header -->
+    <section class="glass-strong rounded-2xl p-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-3xl font-bold gradient-text mb-2">🌍 Global Health Map</h1>
+                <p class="text-emerald-200/80">Nutrition analysis by country based on popular recipes</p>
+            </div>
+            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
+                <i class="fa-solid fa-globe-americas text-white text-2xl"></i>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="glass p-4 rounded-xl">
+                <p class="text-sm text-emerald-200/70">Countries Analyzed</p>
+                <p class="text-2xl font-bold" id="countriesCount">0</p>
+            </div>
+            <div class="glass p-4 rounded-xl">
+                <p class="text-sm text-emerald-200/70">Total Recipes</p>
+                <p class="text-2xl font-bold" id="recipesCount">0</p>
+            </div>
+            <div class="glass p-4 rounded-xl">
+                <p class="text-sm text-emerald-200/70">Top Country</p>
+                <p class="text-2xl font-bold gradient-text" id="topCountry">-</p>
+            </div>
+            <div class="glass p-4 rounded-xl">
+                <p class="text-sm text-emerald-200/70">Avg Health Score</p>
+                <p class="text-2xl font-bold" id="avgScore">0</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Map & Ranking -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Interactive Map -->
+        <div class="lg:col-span-2">
+            <div class="glass-strong rounded-2xl p-6 card-hover">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold flex items-center">
+                        <i class="fa-solid fa-map text-emerald-300 mr-3"></i>
+                        Interactive Health Map
+                    </h2>
+                    <div class="flex gap-2">
+                        <button onclick="loadSimulatedData()" class="glass px-4 py-2 rounded-lg text-sm hover:bg-emerald-500/10">
+                            <i class="fa-solid fa-dice mr-1"></i> Simulate Data
+                        </button>
+                        <button onclick="loadRealData()" class="btn-primary px-4 py-2 rounded-lg text-sm">
+                            <i class="fa-solid fa-database mr-1"></i> Load Real Data
+                        </button>
+                    </div>
+                </div>
+                <div id="healthMap"></div>
+                <div class="flex justify-center mt-4 space-x-4">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full bg-red-500/70 mr-2"></div>
+                        <span class="text-sm">Low (0-40)</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full bg-yellow-500/70 mr-2"></div>
+                        <span class="text-sm">Medium (41-70)</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full bg-green-500/70 mr-2"></div>
+                        <span class="text-sm">High (71-100)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Rankings -->
+        <div>
+            <div class="glass-strong rounded-2xl p-6 card-hover h-full">
+                <h2 class="text-xl font-bold mb-6 flex items-center">
+                    <i class="fa-solid fa-trophy text-yellow-400 mr-3"></i>
+                    Top 10 Healthiest Countries
+                </h2>
+                <div id="rankingList" class="space-y-3">
+                    <!-- Dynamic content will be loaded here -->
+                </div>
+                
+                <div class="mt-8 glass p-4 rounded-xl">
+                    <h3 class="font-bold mb-2 flex items-center">
+                        <i class="fa-solid fa-calculator text-emerald-300 mr-2"></i>
+                        Health Score Formula
+                    </h3>
+                    <p class="text-sm text-emerald-200/80">
+                        Score = (Nutrition × 0.4) + (Balance × 0.3) + (Variety × 0.2) + (Freshness × 0.1)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Country Details & Charts -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Country Details -->
+        <div class="glass-strong rounded-2xl p-6 card-hover">
+            <h2 class="text-xl font-bold mb-6 flex items-center">
+                <i class="fa-solid fa-flag text-emerald-300 mr-3"></i>
+                Selected Country Analysis
+            </h2>
+            <div id="countryDetails" class="space-y-4">
+                <div class="text-center py-12 text-emerald-200/50">
+                    <i class="fa-solid fa-globe text-4xl mb-4"></i>
+                    <p>Click on a country to see detailed analysis</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script>
+// ====================
+// HEALTH SCORE ALGORITHM
+// ====================
+class HealthScoreCalculator {
+    /**
+     * Calculate health score for a country based on its recipes
+     * @param {Array} recipes - List of recipes from the country
+     * @returns {Object} - Score breakdown and total score
+     */
+    calculateCountryScore(recipes) {
+        if (!recipes || recipes.length === 0) return { total: 0, breakdown: {} };
+
+        const scores = recipes.map(recipe => this.calculateRecipeScore(recipe));
+        
+        // Weighted average based on recipe popularity
+        const avgNutrition = this.weightedAverage(scores, 'nutrition', recipes);
+        const avgBalance = this.weightedAverage(scores, 'balance', recipes);
+        const avgVariety = this.weightedAverage(scores, 'variety', recipes);
+        const avgFreshness = this.weightedAverage(scores, 'freshness', recipes);
+
+        // Final weighted score
+        const total = (
+            avgNutrition * 0.4 +
+            avgBalance * 0.3 +
+            avgVariety * 0.2 +
+            avgFreshness * 0.1
+        );
+
+        return {
+            total: Math.round(total),
+            breakdown: {
+                nutrition: Math.round(avgNutrition),
+                balance: Math.round(avgBalance),
+                variety: Math.round(avgVariety),
+                freshness: Math.round(avgFreshness)
+            },
+            recipeCount: recipes.length
+        };
+    }
+
+    /**
+     * Calculate individual recipe score
+     */
+    calculateRecipeScore(recipe) {
+        // Nutrition Score (0-100): Based on macro/micro nutrients
+        const nutritionScore = this.calculateNutritionScore(recipe.ingredients);
+        
+        // Balance Score (0-100): Protein/Carbs/Fat ratio
+        const balanceScore = this.calculateBalanceScore(recipe.nutrition);
+        
+        // Variety Score (0-100): Number of different food groups
+        const varietyScore = this.calculateVarietyScore(recipe.ingredients);
+        
+        // Freshness Score (0-100): Based on processed vs fresh ingredients
+        const freshnessScore = this.calculateFreshnessScore(recipe.ingredients);
+
+        return { nutritionScore, balanceScore, varietyScore, freshnessScore };
+    }
+
+    /**
+     * Nutrition: Analyze vitamins, minerals, fiber content
+     */
+    calculateNutritionScore(ingredients) {
+        let score = 50; // Base score
+        
+        // Positive factors
+        const positiveFactors = {
+            'vegetable': 15,
+            'fruit': 12,
+            'whole_grain': 10,
+            'lean_protein': 8,
+            'legume': 10,
+            'nut': 8,
+            'seed': 6,
+            'herb': 5
+        };
+
+        // Negative factors
+        const negativeFactors = {
+            'processed': -20,
+            'sugar': -15,
+            'saturated_fat': -12,
+            'refined_grain': -10,
+            'artificial': -25
+        };
+
+        ingredients.forEach(ing => {
+            const factor = ing.health_factor || 'neutral';
+            if (positiveFactors[factor]) score += positiveFactors[factor];
+            if (negativeFactors[factor]) score += negativeFactors[factor];
+        });
+
+        return Math.max(0, Math.min(100, score));
+    }
+
+    /**
+     * Balance: Ideal macronutrient distribution
+     */
+    calculateBalanceScore(nutrition) {
+        const idealRatios = {
+            protein: 0.25,  // 25%
+            carbs: 0.50,    // 50%
+            fat: 0.25       // 25%
+        };
+
+        const total = nutrition.protein + nutrition.carbs + nutrition.fat;
+        if (total === 0) return 50;
+
+        const actualRatios = {
+            protein: nutrition.protein / total,
+            carbs: nutrition.carbs / total,
+            fat: nutrition.fat / total
+        };
+
+        // Calculate deviation from ideal
+        let deviation = 0;
+        for (const nutrient in idealRatios) {
+            deviation += Math.abs(actualRatios[nutrient] - idealRatios[nutrient]);
+        }
+
+        // Convert deviation to score (0-100)
+        return Math.max(0, 100 - (deviation * 200));
+    }
+
+    /**
+     * Variety: Different food groups represented
+     */
+    calculateVarietyScore(ingredients) {
+        const foodGroups = new Set();
+        const groupMapping = {
+            'vegetable': 'vegetable',
+            'fruit': 'fruit',
+            'grain': 'grain',
+            'protein': 'protein',
+            'dairy': 'dairy',
+            'fat': 'fat'
+        };
+
+        ingredients.forEach(ing => {
+            if (groupMapping[ing.category]) {
+                foodGroups.add(groupMapping[ing.category]);
+            }
+        });
+
+        // Score based on number of different food groups
+        const groupCount = foodGroups.size;
+        if (groupCount >= 5) return 100;
+        if (groupCount === 4) return 80;
+        if (groupCount === 3) return 60;
+        if (groupCount === 2) return 40;
+        return 20;
+    }
+
+    /**
+     * Freshness: Minimally processed ingredients
+     */
+    calculateFreshnessScore(ingredients) {
+        let freshCount = 0;
+        let processedCount = 0;
+
+        ingredients.forEach(ing => {
+            if (ing.is_fresh || ing.category === 'vegetable' || ing.category === 'fruit') {
+                freshCount++;
+            }
+            if (ing.is_processed) {
+                processedCount++;
+            }
+        });
+
+        const total = ingredients.length;
+        if (total === 0) return 50;
+
+        const freshRatio = freshCount / total;
+        const processedRatio = processedCount / total;
+
+        return Math.max(0, Math.min(100, (freshRatio * 100) - (processedRatio * 50) + 50));
+    }
+
+    /**
+     * Helper: Weighted average calculation
+     */
+    weightedAverage(scores, metric, recipes) {
+        const totalWeight = recipes.reduce((sum, recipe) => sum + (recipe.popularity || 1), 0);
+        const weightedSum = scores.reduce((sum, score, idx) => {
+            const weight = recipes[idx].popularity || 1;
+            return sum + score[`${metric}Score`] * weight;
+        }, 0);
+        
+        return totalWeight > 0 ? weightedSum / totalWeight : 0;
+    }
+}
+
+// ====================
+// DATA SIMULATION & MANAGEMENT
+// ====================
+class HealthMapManager {
+    constructor() {
+        this.calculator = new HealthScoreCalculator();
+        this.countryData = new Map();
+        this.map = null;
+        this.selectedCountry = null;
+        
+        // Sample country data with simulated recipes
+        this.sampleCountries = [
+            {
+                code: 'JP',
+                name: 'Japan',
+                recipes: [
+                    {
+                        name: 'Miso Soup',
+                        ingredients: [
+                            { name: 'Miso', category: 'fermented', health_factor: 'probiotic' },
+                            { name: 'Tofu', category: 'protein', health_factor: 'lean_protein' },
+                            { name: 'Seaweed', category: 'vegetable', health_factor: 'mineral_rich' }
+                        ],
+                        nutrition: { protein: 8, carbs: 6, fat: 3 },
+                        popularity: 0.9
+                    },
+                    {
+                        name: 'Sashimi',
+                        ingredients: [
+                            { name: 'Salmon', category: 'protein', health_factor: 'omega_3' },
+                            { name: 'Tuna', category: 'protein', health_factor: 'lean_protein' }
+                        ],
+                        nutrition: { protein: 25, carbs: 0, fat: 5 },
+                        popularity: 0.8
+                    }
+                ]
+            },
+            {
+                code: 'IT',
+                name: 'Italy',
+                recipes: [
+                    {
+                        name: 'Mediterranean Salad',
+                        ingredients: [
+                            { name: 'Tomato', category: 'vegetable', health_factor: 'vegetable' },
+                            { name: 'Olive Oil', category: 'fat', health_factor: 'healthy_fat' },
+                            { name: 'Mozzarella', category: 'dairy', health_factor: 'calcium' }
+                        ],
+                        nutrition: { protein: 12, carbs: 10, fat: 15 },
+                        popularity: 0.7
+                    }
+                ]
+            }
+            // Add more countries as needed
+        ];
+    }
+
+    /**
+     * Generate simulated data for demonstration
+     */
+    generateSimulatedData() {
+        const countries = ['Japan', 'Italy', 'Spain', 'Greece', 'Sweden', 'South Korea', 
+                          'France', 'Germany', 'UK', 'USA', 'Mexico', 'Brazil', 'India', 'Thailand'];
+        
+        const simulatedData = countries.map(country => {
+            const code = this.getCountryCode(country);
+            const recipeCount = Math.floor(Math.random() * 15) + 5;
+            
+            const recipes = Array.from({ length: recipeCount }, (_, i) => ({
+                name: `${country} Dish ${i + 1}`,
+                ingredients: this.generateRandomIngredients(),
+                nutrition: {
+                    protein: Math.floor(Math.random() * 30) + 10,
+                    carbs: Math.floor(Math.random() * 50) + 20,
+                    fat: Math.floor(Math.random() * 20) + 5
+                },
+                popularity: Math.random() * 0.5 + 0.5 // 0.5 to 1.0
+            }));
+
+            return {
+                code,
+                name: country,
+                recipes,
+                recipeCount
+            };
+        });
+
+        this.processCountryData(simulatedData);
+        return simulatedData;
+    }
+
+    generateRandomIngredients() {
+        const ingredientTypes = ['vegetable', 'fruit', 'protein', 'grain', 'dairy', 'fat'];
+        const healthFactors = ['vegetable', 'fruit', 'whole_grain', 'lean_protein', 'healthy_fat', 'probiotic'];
+        
+        const count = Math.floor(Math.random() * 6) + 3; // 3-8 ingredients
+        return Array.from({ length: count }, (_, i) => ({
+            name: `Ingredient ${i + 1}`,
+            category: ingredientTypes[Math.floor(Math.random() * ingredientTypes.length)],
+            health_factor: healthFactors[Math.floor(Math.random() * healthFactors.length)],
+            is_fresh: Math.random() > 0.3,
+            is_processed: Math.random() > 0.7
+        }));
+    }
+
+    getCountryCode(countryName) {
+        const countryCodes = {
+            'Japan': 'JP', 'Italy': 'IT', 'Spain': 'ES', 'Greece': 'GR',
+            'Sweden': 'SE', 'South Korea': 'KR', 'France': 'FR', 'Germany': 'DE',
+            'UK': 'GB', 'USA': 'US', 'Mexico': 'MX', 'Brazil': 'BR',
+            'India': 'IN', 'Thailand': 'TH'
+        };
+        return countryCodes[countryName] || 'XX';
+    }
+
+    /**
+     * Process data and calculate scores
+     */
+    processCountryData(countriesData) {
+        this.countryData.clear();
+        
+        countriesData.forEach(country => {
+            const score = this.calculator.calculateCountryScore(country.recipes);
+            
+            this.countryData.set(country.code, {
+                ...country,
+                score: score.total,
+                breakdown: score.breakdown,
+                details: {
+                    totalRecipes: score.recipeCount,
+                    bestIngredient: this.findBestIngredient(country.recipes),
+                    commonDish: this.findMostCommonDish(country.recipes)
+                }
+            });
+        });
+    }
+
+    findBestIngredient(recipes) {
+        const ingredientScores = {};
+        recipes.forEach(recipe => {
+            recipe.ingredients.forEach(ing => {
+                if (!ingredientScores[ing.name]) {
+                    ingredientScores[ing.name] = { count: 0, healthScore: 0 };
+                }
+                ingredientScores[ing.name].count++;
+                // Simple scoring: fresh + healthy_factor = higher score
+                let score = 0;
+                if (ing.health_factor) score += 20;
+                if (ing.is_fresh) score += 15;
+                ingredientScores[ing.name].healthScore += score;
+            });
+        });
+
+        let bestIngredient = null;
+        let maxScore = 0;
+        
+        for (const [name, data] of Object.entries(ingredientScores)) {
+            const avgScore = data.healthScore / data.count;
+            if (avgScore > maxScore) {
+                maxScore = avgScore;
+                bestIngredient = name;
+            }
+        }
+
+        return bestIngredient || 'Unknown';
+    }
+
+    findMostCommonDish(recipes) {
+        if (recipes.length === 0) return 'None';
+        // Return the most popular recipe
+        return recipes.reduce((prev, current) => 
+            (prev.popularity || 0) > (current.popularity || 0) ? prev : current
+        ).name;
+    }
+
+    /**
+     * Initialize the map
+     */
+    initMap() {
+        this.map = L.map('healthMap').setView([20, 0], 2);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            opacity: 0.7
+        }).addTo(this.map);
+
+        this.updateMapMarkers();
+    }
+
+    /**
+     * Update map with current data
+     */
+    updateMapMarkers() {
+        if (!this.map) return;
+
+        // Clear existing markers
+        this.map.eachLayer(layer => {
+            if (layer instanceof L.CircleMarker) {
+                this.map.removeLayer(layer);
+            }
+        });
+
+        // Get country coordinates (simplified)
+        const countryCoords = {
+            'JP': [36.2048, 138.2529], 'IT': [41.8719, 12.5674], 'ES': [40.4637, -3.7492],
+            'GR': [39.0742, 21.8243], 'SE': [60.1282, 18.6435], 'KR': [35.9078, 127.7669],
+            'FR': [46.2276, 2.2137], 'DE': [51.1657, 10.4515], 'GB': [55.3781, -3.4360],
+            'US': [37.0902, -95.7129], 'MX': [23.6345, -102.5528], 'BR': [-14.2350, -51.9253],
+            'IN': [20.5937, 78.9629], 'TH': [15.8700, 100.9925]
+        };
+
+        this.countryData.forEach((data, code) => {
+            const coords = countryCoords[code] || [Math.random() * 70 - 35, Math.random() * 140 - 70];
+            
+            // Determine color based on score
+            let color;
+            if (data.score >= 70) color = '#10b981';
+            else if (data.score >= 40) color = '#f59e0b';
+            else color = '#ef4444';
+
+            const marker = L.circleMarker(coords, {
+                radius: 10 + (data.score / 10),
+                fillColor: color,
+                color: '#ffffff',
+                weight: 2,
+                opacity: 0.8,
+                fillOpacity: 0.7
+            }).addTo(this.map);
+
+            marker.bindPopup(`
+                <div style="color: #1f2937; min-width: 200px;">
+                    <strong>${data.name}</strong><br>
+                    Health Score: <b>${data.score}/100</b><br>
+                    Recipes Analyzed: ${data.recipes.length}<br>
+                    <hr>
+                    Nutrition: ${data.breakdown?.nutrition || 0}<br>
+                    Balance: ${data.breakdown?.balance || 0}<br>
+                    Variety: ${data.breakdown?.variety || 0}<br>
+                    Freshness: ${data.breakdown?.freshness || 0}
+                </div>
+            `);
+
+            marker.on('click', () => {
+                this.selectCountry(data);
+            });
+        });
+    }
+
+    /**
+     * Select a country and show details
+     */
+    selectCountry(countryData) {
+        this.selectedCountry = countryData;
+        this.updateCountryDetails();
+        this.updateChart();
+    }
+
+    updateCountryDetails() {
+        if (!this.selectedCountry) return;
+
+        const detailsDiv = document.getElementById('countryDetails');
+        detailsDiv.innerHTML = `
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-2xl font-bold">${this.selectedCountry.name}</h3>
+                    <span class="text-4xl font-bold gradient-text">${this.selectedCountry.score}/100</span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="glass p-4 rounded-xl">
+                        <p class="text-sm text-emerald-200/70">Recipes Analyzed</p>
+                        <p class="text-xl font-bold">${this.selectedCountry.recipes.length}</p>
+                    </div>
+                    <div class="glass p-4 rounded-xl">
+                        <p class="text-sm text-emerald-200/70">Best Ingredient</p>
+                        <p class="text-xl font-bold">${this.selectedCountry.details.bestIngredient}</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="font-bold mb-2">Score Breakdown</h4>
+                    <div class="space-y-2">
+                        ${Object.entries(this.selectedCountry.breakdown || {}).map(([key, value]) => `
+                            <div class="flex items-center justify-between">
+                                <span class="capitalize">${key}</span>
+                                <div class="flex items-center w-2/3">
+                                    <div class="flex-1 bg-gray-700 rounded-full h-2 mr-2">
+                                        <div class="bg-emerald-500 h-2 rounded-full" style="width: ${value}%"></div>
+                                    </div>
+                                    <span>${value}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="font-bold mb-2">Sample Recipes</h4>
+                    <div class="space-y-2 max-h-40 overflow-y-auto">
+                        ${this.selectedCountry.recipes.slice(0, 3).map(recipe => `
+                            <div class="glass p-3 rounded-lg">
+                                <p class="font-semibold">${recipe.name}</p>
+                                <p class="text-sm text-emerald-200/70">${recipe.ingredients.length} ingredients</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    updateChart() {
+        if (!this.selectedCountry) return;
+
+        const ctx = document.getElementById('scoreChart').getContext('2d');
+        
+        // Destroy existing chart if exists
+        if (window.scoreChartInstance) {
+            window.scoreChartInstance.destroy();
+        }
+
+        const labels = Object.keys(this.selectedCountry.breakdown || {});
+        const data = Object.values(this.selectedCountry.breakdown || {});
+
+        window.scoreChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+                datasets: [{
+                    data: data,
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(139, 92, 246, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    /**
+     * Update UI with current data
+     */
+    updateUI() {
+        const countries = Array.from(this.countryData.values());
+        
+        // Update counters
+        document.getElementById('countriesCount').textContent = countries.length;
+        document.getElementById('recipesCount').textContent = countries.reduce((sum, c) => sum + c.recipes.length, 0);
+        
+        // Find top country
+        if (countries.length > 0) {
+            const topCountry = countries.reduce((prev, current) => 
+                prev.score > current.score ? prev : current
+            );
+            document.getElementById('topCountry').textContent = topCountry.name;
+            document.getElementById('avgScore').textContent = Math.round(
+                countries.reduce((sum, c) => sum + c.score, 0) / countries.length
+            );
+        }
+
+        // Update ranking list
+        const sortedCountries = [...countries].sort((a, b) => b.score - a.score);
+        const rankingList = document.getElementById('rankingList');
+        
+        rankingList.innerHTML = sortedCountries.slice(0, 10).map((country, index) => `
+            <div class="flex items-center justify-between glass p-3 rounded-lg hover:bg-emerald-500/10 transition cursor-pointer" 
+                 onclick="healthMapManager.selectCountry(${JSON.stringify(country).replace(/"/g, '&quot;')})">
+                <div class="flex items-center">
+                    <span class="w-6 h-6 flex items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold mr-3">
+                        ${index + 1}
+                    </span>
+                    <span class="font-medium">${country.name}</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-16 bg-gray-700 rounded-full h-2 mr-2">
+                        <div class="bg-emerald-500 h-2 rounded-full" style="width: ${country.score}%"></div>
+                    </div>
+                    <span class="font-bold">${country.score}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+// ====================
+// GLOBAL INSTANCE & INIT
+// ====================
+const healthMapManager = new HealthMapManager();
+
+function loadSimulatedData() {
+    healthMapManager.generateSimulatedData();
+    healthMapManager.updateMapMarkers();
+    healthMapManager.updateUI();
+    
+    // Auto-select top country
+    const countries = Array.from(healthMapManager.countryData.values());
+    if (countries.length > 0) {
+        const topCountry = countries.reduce((prev, current) => 
+            prev.score > current.score ? prev : current
+        );
+        healthMapManager.selectCountry(topCountry);
+    }
+}
+
+function loadRealData() {
+    // Placeholder for real API call
+    alert('This would connect to your backend API\nPOST /api/health-map/calculate\nwith country recipe data from MongoDB');
+    
+    // For now, load simulated data but label it as "real"
+    loadSimulatedData();
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    healthMapManager.initMap();
+    
+    // Load initial simulated data
+    setTimeout(() => {
+        loadSimulatedData();
+    }, 500);
+});
+</script>
+</body>
+</html>
