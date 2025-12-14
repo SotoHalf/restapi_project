@@ -9,6 +9,6 @@ apis:
     description: "Cooking recipes"
 
   openfoodfacts:
-    enabled: false
+    enabled: true
     extractor: "etl.extract.openfoodfacts_extractor.OpenFoodFactsExtractor"
     description: "Products data (Nutrition)"
