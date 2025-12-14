@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard - Food & Nutrition Hub</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<style>
+:root {
+    --primary: #10b981;
+    --primary-dark: #059669;
+    --secondary: #8b5cf6;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+}
+
+body {
+    background: linear-gradient(135deg,
+        #0c4a33 0%,
+        #065f46 30%,
+        #064e3b 70%,
+        #022c22 100%);
+    font-family: 'Inter', system-ui, sans-serif;
+    color: white;
+    min-height: 100vh;
+}
+
+.glass {
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.05) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.glass-strong {
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.08) 100%);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.gradient-text {
+    background: linear-gradient(90deg, #10b981, #34d399, #10b981);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.card-hover { transition: all 0.3s ease; }
+.card-hover:hover { transform: translateY(-3px); }
+
+.btn-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    transition: all 0.3s ease;
+}
+
+.btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+}
+
+.input-field {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.input-field:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    outline: none;
+}
+
+/* Notification */
+.notification {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    padding: 16px 20px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    transform: translateX(120%) scale(0.9);
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+                opacity 0.3s ease;
+    opacity: 0;
+    border-left: 4px solid #10b981;
+}
+
+.notification.show {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+}
+
+/* Raw Data Explorer Styles */
+.tab-button {
+    background: transparent;
+    border: none;
+    padding: 12px 24px;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-button.active {
+    color: white;
+    border-bottom-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.tab-button:hover:not(.active) {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #a7f3d0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.data-table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.data-table tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.json-viewer {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    padding: 16px;
+    max-height: 400px;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
+.json-key { color: #60a5fa; }
+.json-string { color: #34d399; }
+.json-number { color: #fbbf24; }
+.json-boolean { color: #f472b6; }
+.json-null { color: #9ca3af; }
+
+.tab-content { display: block; }
+.tab-content.hidden { display: none; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(16, 185, 129, 0.5);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(16, 185, 129, 0.7);
+}
+</style>
+</head>
+
+<body class="min-h-screen p-4 md:p-8">
+
+<!-- Notification Toast -->
+<div id="notification" class="notification">
+    <div class="flex items-center">
+        <i id="notificationIcon" class="fa-solid fa-check-circle text-xl mr-3 text-emerald-500"></i>
+        <div class="flex-1">
+            <p id="notificationTitle" class="font-bold text-gray-800">Success!</p>
+            <p id="notificationMessage" class="text-gray-600 text-sm mt-0.5">Operation completed successfully.</p>
+        </div>
+        <button onclick="hideNotification()" class="ml-4 text-gray-400 hover:text-gray-600">
+            <i class="fa-solid fa-times"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Navbar -->
+<nav class="glass-strong rounded-2xl px-6 py-4 flex justify-between items-center mb-8">
+    <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+            <i class="fa-solid fa-shield text-white"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-bold gradient-text">Admin Dashboard</h1>
+            <p class="text-sm text-emerald-200/70">Food & Nutrition Hub Management</p>
+        </div>
+    </div>
+    <div class="flex gap-4 items-center">
+        <span id="adminUsername" class="text-emerald-300">Loading...</span>
+        <button onclick="goHome()" class="glass px-4 py-2 rounded-lg text-emerald-300 hover:text-white hover:bg-emerald-500/10 transition flex items-center">
+            <i class="fa-solid fa-home mr-2"></i>Home
+        </button>
+        <button onclick="logout()" class="glass px-4 py-2 rounded-lg text-red-300 hover:text-white hover:bg-red-500/10 transition flex items-center">
+            <i class="fa-solid fa-right-from-bracket mr-2"></i>Logout
+        </button>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<main class="max-w-7xl mx-auto space-y-8">
+
+    <!-- Stats Dashboard -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="glass rounded-2xl p-6 card-hover">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center mr-4">
+                    <i class="fa-solid fa-users text-emerald-300"></i>
+                </div>
+                <div>
+                    <h3 class="text-emerald-200/80 text-sm">Total Users</h3>
+                    <p class="text-3xl font-bold gradient-text" id="totalUsers">0</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass rounded-2xl p-6 card-hover">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center mr-4">
+                    <i class="fa-solid fa-database text-blue-300"></i>
+                </div>
+                <div>
+                    <h3 class="text-emerald-200/80 text-sm">Collections</h3>
+                    <p class="text-3xl font-bold text-blue-400" id="totalCollections">0</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass rounded-2xl p-6 card-hover">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center mr-4">
+                    <i class="fa-solid fa-sync-alt text-purple-300"></i>
+                </div>
+                <div>
+                    <h3 class="text-emerald-200/80 text-sm">ETL Status</h3>
+                    <p class="text-lg text-emerald-300" id="etlStatus">Idle</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass rounded-2xl p-6 card-hover">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 rounded-lg bg-yellow-500/20 flex items-center justify-center mr-4">
+                    <i class="fa-solid fa-server text-yellow-300"></i>
+                </div>
+                <div>
+                    <h3 class="text-emerald-200/80 text-sm">System Status</h3>
+                    <p class="text-lg text-emerald-300" id="systemStatus">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ETL Management Section -->
+    <section class="glass-strong rounded-2xl p-8 card-hover">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold flex items-center">
+                <i class="fa-solid fa-robot text-emerald-300 mr-3"></i>
+                ETL Process Management
+            </h2>
+            <div class="flex gap-3">
+                <button onclick="checkSystemStatus()" class="glass px-4 py-2 rounded-lg hover:bg-emerald-500/10 transition">
+                    <i class="fa-solid fa-sync mr-2"></i>Check Status
+                </button>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="glass p-6 rounded-xl">
+                <h3 class="font-bold mb-4 flex items-center">
+                    <i class="fa-solid fa-cloud-download-alt text-blue-300 mr-2"></i>
+                    Run API 1 ETL Process
+                </h3>
+                <p class="text-emerald-200/70 mb-4 text-sm">
+                    Execute shell script and load CSV data into MongoDB
+                </p>
+                <button onclick="runETLAPI1()" class="btn-primary px-6 py-3 rounded-lg w-full">
+                    <i class="fa-solid fa-play mr-2"></i>Run ETL Process
+                </button>
+                <div id="etlProgress" class="mt-4 hidden">
+                    <div class="flex items-center mb-2">
+                        <i class="fa-solid fa-spinner fa-spin text-emerald-400 mr-2"></i>
+                        <span class="text-sm text-emerald-300">Running ETL process...</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2">
+                        <div class="bg-emerald-500 h-2 rounded-full animate-pulse" style="width: 60%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass p-6 rounded-xl">
+                <h3 class="font-bold mb-4 flex items-center">
+                    <i class="fa-solid fa-chart-line text-purple-300 mr-2"></i>
+                    System Information
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-emerald-200/70">Backend</span>
+                        <span class="font-medium" id="backendInfo">MongoDB Atlas</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-emerald-200/70">Authenticated as</span>
+                        <span class="font-medium" id="authInfo">Loading...</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-emerald-200/70">Role</span>
+                        <span class="px-2 py-1 bg-emerald-500/20 rounded text-xs" id="roleInfo">admin</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Raw Data Explorer Section -->
+    <section class="glass-strong rounded-2xl p-8 card-hover">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold flex items-center">
+                <i class="fa-solid fa-database text-emerald-300 mr-3"></i>
+                Raw Data Explorer
+            </h2>
+            <div class="flex gap-3">
+                <button onclick="loadCollections()" class="glass px-4 py-2 rounded-lg hover:bg-emerald-500/10 transition">
+                    <i class="fa-solid fa-rotate-right mr-2"></i>Refresh
+                </button>
+                <button onclick="switchTab('collections')" class="btn-primary px-4 py-2 rounded-lg">
+                    <i class="fa-solid fa-table mr-2"></i>Show Raw Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabs for Raw Data -->
+        <div class="glass rounded-2xl mb-6 overflow-hidden">
+            <div class="flex border-b border-white/10">
+                <button id="tabCollections" class="tab-button active" onclick="switchTab('collections')">
+                    <i class="fa-solid fa-layer-group mr-2"></i>Collections
+                </button>
+                <button id="tabData" class="tab-button" onclick="switchTab('data')">
+                    <i class="fa-solid fa-table mr-2"></i>Collection Data
+                </button>
+                <button id="tabDetails" class="tab-button" onclick="switchTab('details')">
+                    <i class="fa-solid fa-file-code mr-2"></i>Document Details
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab 1: Collections -->
+        <div id="tabContentCollections" class="tab-content">
+            <div class="glass p-6 rounded-xl">
+                <h3 class="font-bold mb-4">Database Collections</h3>
+                
+                <!-- Collections Grid -->
+                <div id="collectionsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="text-center py-12 text-emerald-200/50">
+                        <i class="fa-solid fa-spinner fa-spin text-3xl mb-4"></i>
+                        <p>Loading collections...</p>
+                    </div>
+                </div>
+                
+                <!-- Database Info -->
+                <div class="mt-6 glass p-4 rounded-xl">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold" id="databaseName">Loading database...</h3>
+                            <p class="text-sm text-emerald-200/70" id="collectionCount">0 collections</p>
+                        </div>
+                        <div class="text-sm text-emerald-300">
+                            <i class="fa-solid fa-database mr-2"></i>
+                            MongoDB Atlas
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Collection Data -->
+        <div id="tabContentData" class="tab-content hidden">
+            <div class="glass p-6 rounded-xl">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="font-bold" id="currentCollectionTitle">
+                            <i class="fa-solid fa-table text-emerald-300 mr-2"></i>
+                            Select a Collection
+                        </h3>
+                        <p class="text-emerald-200/70 text-sm" id="collectionInfo">Choose a collection from the list</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="previousPage()" class="glass px-3 py-2 rounded-lg disabled:opacity-50" id="prevBtn" disabled>
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <span class="glass px-3 py-2 rounded-lg text-sm" id="pageInfo">Page 1</span>
+                        <button onclick="nextPage()" class="glass px-3 py-2 rounded-lg disabled:opacity-50" id="nextBtn" disabled>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Data Table -->
+                <div class="overflow-x-auto rounded-xl max-h-96 overflow-y-auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Preview</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Empty State -->
+                <div id="emptyDataState" class="text-center py-12 hidden">
+                    <i class="fa-solid fa-database text-4xl text-emerald-200/30 mb-4"></i>
+                    <p class="text-emerald-200/50">No collection selected. Choose a collection to view its data.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Document Details -->
+        <div id="tabContentDetails" class="tab-content hidden">
+            <div class="glass p-6 rounded-xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-bold">
+                        <i class="fa-solid fa-file-code text-emerald-300 mr-2"></i>
+                        Document Details
+                    </h3>
+                    <button onclick="closeDocumentView()" class="glass px-4 py-2 rounded-lg hover:bg-emerald-500/10 transition">
+                        <i class="fa-solid fa-times mr-2"></i>Close
+                    </button>
+                </div>
+                
+                <!-- Document Info -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-medium" id="documentTitle">Document</h4>
+                        <span class="text-sm text-emerald-300" id="documentCollection">Collection</span>
+                    </div>
+                    
+                    <!-- JSON Viewer -->
+                    <div class="json-viewer" id="jsonViewer">
+                        <div class="text-center py-12 text-emerald-200/50">
+                            <i class="fa-solid fa-code text-3xl mb-4"></i>
+                            <p>Select a document to view its details</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- User Management Section -->
+    <section class="glass-strong rounded-2xl p-8 card-hover">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold flex items-center">
+                <i class="fa-solid fa-user-gear text-emerald-300 mr-3"></i>
+                User Management (CRUD)
+            </h2>
+            <div class="flex gap-3">
+                <button onclick="getAllUsers()" class="btn-primary px-4 py-2 rounded-lg">
+                    <i class="fa-solid fa-users mr-2"></i>Load All Users
+                </button>
+                <button onclick="resetForm()" class="glass px-4 py-2 rounded-lg hover:bg-emerald-500/10 transition">
+                    <i class="fa-solid fa-eraser mr-2"></i>Clear Form
+                </button>
+            </div>
+        </div>
+
+        <!-- Create/Update Form -->
+        <div class="glass p-6 rounded-xl mb-8">
+            <h3 class="font-bold mb-4">Create / Update User</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm text-emerald-200/80 mb-2">
+                        <i class="fa-solid fa-user mr-2"></i>Username
+                    </label>
+                    <input id="username" type="text" placeholder="Enter username" 
+                           class="input-field w-full px-4 py-3 rounded-lg text-white placeholder-emerald-200/50">
+                </div>
+                <div>
+                    <label class="block text-sm text-emerald-200/80 mb-2">
+                        <i class="fa-solid fa-lock mr-2"></i>Password
+                    </label>
+                    <input id="password" type="password" placeholder="Enter password" 
+                           class="input-field w-full px-4 py-3 rounded-lg text-white placeholder-emerald-200/50">
+                </div>
+                <div>
+                    <label class="block text-sm text-emerald-200/80 mb-2">
+                        <i class="fa-solid fa-user-tag mr-2"></i>Role
+                    </label>
+                    <select id="role" class="input-field w-full px-4 py-3 rounded-lg text-white">
+                        <option value="role_user">User</option>
+                        <option value="role_admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="createUser()" class="btn-primary px-6 py-3 rounded-lg flex-1">
+                    <i class="fa-solid fa-user-plus mr-2"></i>Create User
+                </button>
+                <button onclick="updateUser()" class="btn-warning px-6 py-3 rounded-lg flex-1">
+                    <i class="fa-solid fa-user-pen mr-2"></i>Update User
+                </button>
+                <input id="selectedUserId" type="hidden" value="">
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="overflow-x-auto rounded-xl">
+            <table class="w-full">
+                <thead>
+                    <tr class="glass">
+                        <th class="text-left p-4 text-emerald-200/80">ID</th>
+                        <th class="text-left p-4 text-emerald-200/80">Username</th>
+                        <th class="text-left p-4 text-emerald-200/80">Email</th>
+                        <th class="text-left p-4 text-emerald-200/80">Role</th>
+                        <th class="text-left p-4 text-emerald-200/80">Created</th>
+                        <th class="text-left p-4 text-emerald-200/80">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table" class="divide-y divide-white/10">
+                    <!-- Users will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Empty State -->
+        <div id="emptyState" class="text-center py-12">
+            <i class="fa-solid fa-users text-4xl text-emerald-200/30 mb-4"></i>
+            <p class="text-emerald-200/50">No users loaded. Click "Load All Users" to display user data.</p>
+        </div>
+    </section>
+
+</main>
+
+<script>
+// ====================
+// CONFIGURATION
+// ====================
+const API_URL = "http://127.0.0.1:8000";
+let CURRENT_USER_ID = null;
+
+// ====================
+// AUTH & INITIALIZATION
+// ====================
+const token = localStorage.getItem("access_token");
+if (!token) {
+    window.location.href = "/";
+}
+
+// Verificar que el usuario sea admin
+async function checkAdminAccess() {
+    try {
+        const response = await fetch(`${API_URL}/users/me`, {
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error("Not authenticated");
+        }
+        
+        const userData = await response.json();
+        
+        // Mostrar nombre de admin
+        document.getElementById('adminUsername').textContent = userData.username;
+        
+        // Verificar si es admin
+        if (userData.role !== 'role_admin') {
+            showNotification('Access Denied', 'You need admin privileges to access this page', 'error');
+            setTimeout(() => {
+                window.location.href = "/home";
+            }, 2000);
+            return false;
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Auth error:', error);
+        window.location.href = "/";
+        return false;
+    }
+}
+
+// ====================
+// NOTIFICATION SYSTEM
+// ====================
+function showNotification(title, message, type = 'success') {
+    const notification = document.getElementById('notification');
+    const icon = document.getElementById('notificationIcon');
+    const notificationTitle = document.getElementById('notificationTitle');
+    const notificationMessage = document.getElementById('notificationMessage');
+    
+    notificationTitle.textContent = title;
+    notificationMessage.textContent = message;
+    
+    if (type === 'success') {
+        icon.className = 'fa-solid fa-check-circle text-xl mr-3 text-emerald-500';
+        notification.style.borderLeftColor = '#10b981';
+    } else if (type === 'error') {
+        icon.className = 'fa-solid fa-exclamation-circle text-xl mr-3 text-red-500';
+        notification.style.borderLeftColor = '#ef4444';
+    } else if (type === 'warning') {
+        icon.className = 'fa-solid fa-exclamation-triangle text-xl mr-3 text-yellow-500';
+        notification.style.borderLeftColor = '#f59e0b';
+    } else if (type === 'info') {
+        icon.className = 'fa-solid fa-info-circle text-xl mr-3 text-blue-500';
+        notification.style.borderLeftColor = '#3b82f6';
+    }
+    
+    notification.classList.add('show');
+    
+    // Auto hide after 4 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 4000);
+}
+
+function hideNotification() {
+    document.getElementById('notification').classList.remove('show');
+}
+
+// ====================
+// NAVIGATION
+// ====================
+function goHome() {
+    window.location.href = "/home";
+}
+
+function logout() {
+    localStorage.removeItem("access_token");
+    window.location.href = "/";
+}
+
+// ====================
+// SYSTEM STATUS & ETL
+// ====================
+async function checkSystemStatus() {
+    try {
+        const response = await fetch(`${API_URL}/system/status`, {
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error("Failed to fetch system status");
+        }
+        
+        const data = await response.json();
+        
+        // Actualizar UI
+        document.getElementById('systemStatus').textContent = data.status;
+        document.getElementById('backendInfo').textContent = data.backend;
+        document.getElementById('authInfo').textContent = data.authenticated_as;
+        document.getElementById('roleInfo').textContent = data.role;
+        
+        showNotification('System Status', `System is ${data.status}`, 'success');
+        
+    } catch (error) {
+        console.error('Error checking system status:', error);
+        showNotification('Error', 'Failed to get system status', 'error');
+    }
+}
+
+async function runETLAPI1() {
+    const etlProgress = document.getElementById('etlProgress');
+    const etlStatus = document.getElementById('etlStatus');
+    
+    try {
+        // Mostrar progreso
+        etlProgress.classList.remove('hidden');
+        etlStatus.textContent = 'Running...';
+        etlStatus.className = 'text-lg text-yellow-400';
+        
+        const response = await fetch(`${API_URL}/admin/etl-api1`, {
+            method: 'POST',
+            headers: { 
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'ETL process failed');
+        }
+        
+        const data = await response.json();
+        
+        // Actualizar UI
+        etlProgress.classList.add('hidden');
+        etlStatus.textContent = 'Completed';
+        etlStatus.className = 'text-lg text-emerald-400';
+        
+        showNotification('ETL Process', data.message || 'ETL executed successfully', 'success');
+        
+        // Recargar colecciones después del ETL
+        loadCollections();
+        
+    } catch (error) {
+        console.error('Error running ETL:', error);
+        etlProgress.classList.add('hidden');
+        etlStatus.textContent = 'Failed';
+        etlStatus.className = 'text-lg text-red-400';
+        showNotification('ETL Error', error.message, 'error');
+    }
+}
+
+// ====================
+// RAW DATA EXPLORER
+// ====================
+let rawDataState = {
+    collections: [],
+    currentCollection: null,
+    currentPage: 1,
+    totalPages: 1,
+    totalDocuments: 0,
+    currentDocument: null
+};
+
+// Tab Management
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+    });
+    
+    // Show selected tab
+    document.getElementById(`tab${capitalize(tabName)}`).classList.add('active');
+    document.getElementById(`tabContent${capitalize(tabName)}`).classList.remove('hidden');
+}
+
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Load collections
+async function loadCollections() {
+    try {
+        const response = await fetch(`${API_URL}/admin/collections`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error("Failed to load collections");
+        
+        const data = await response.json();
+        rawDataState.collections = data.collections;
+        
+        // Update UI
+        updateCollectionsGrid(data.collections);
+        document.getElementById('databaseName').textContent = `Database: ${data.database}`;
+        document.getElementById('collectionCount').textContent = `${data.total_collections} collections`;
+        document.getElementById('totalCollections').textContent = data.total_collections;
+        
+        showNotification('Collections Loaded', `Loaded ${data.total_collections} collections`, 'success');
+        
+    } catch (error) {
+        console.error('Error loading collections:', error);
+        showNotification('Error', 'Failed to load collections', 'error');
+    }
+}
+
+function updateCollectionsGrid(collections) {
+    const grid = document.getElementById('collectionsGrid');
+    
+    if (collections.length === 0) {
+        grid.innerHTML = `
+            <div class="col-span-3 text-center py-12 text-emerald-200/50">
+                <i class="fa-solid fa-inbox text-3xl mb-4"></i>
+                <p>No collections found in the database</p>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = collections.map(collection => {
+        // Escapar comillas simples en el nombre de la colección
+        const escapedName = collection.name.replace(/'/g, "\\'");
+        return `
+        <div class="glass rounded-xl p-4 hover:bg-white/5 transition cursor-pointer" 
+             onclick="selectCollection('${escapedName}')">
+            <div class="flex items-center mb-3">
+                <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center mr-3">
+                    <i class="fa-solid fa-table text-emerald-300"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-bold truncate">${collection.name}</h4>
+                    <p class="text-sm text-emerald-200/70">${collection.document_count.toLocaleString()} documents</p>
+                </div>
+            </div>
+            
+            <div class="text-xs text-emerald-200/60 mt-2">
+                <div class="flex items-center mb-1">
+                    <i class="fa-solid fa-tag mr-1"></i>
+                    <span>Fields: ${collection.sample_fields.slice(0, 3).join(', ')}${collection.sample_fields.length > 3 ? '...' : ''}</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fa-solid fa-hashtag mr-1"></i>
+                    <span>Has _id: ${collection.has_id_field ? 'Yes' : 'No'}</span>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <button class="w-full glass-strong py-2 rounded-lg text-sm hover:bg-emerald-500/20 transition"
+                        onclick="event.stopPropagation(); selectCollection('${escapedName}')">
+                    <i class="fa-solid fa-eye mr-2"></i>View Data
+                </button>
+            </div>
+        </div>
+    `}).join('');
+}
+
+// Select collection
+async function selectCollection(collectionName) {
+    rawDataState.currentCollection = collectionName;
+    rawDataState.currentPage = 1;
+    
+    // Update UI
+    document.getElementById('currentCollectionTitle').innerHTML = `
+        <i class="fa-solid fa-table text-emerald-300 mr-2"></i>
+        ${collectionName}
+    `;
+    
+    // Switch to data tab
+    switchTab('data');
+    
+    // Load first page
+    await loadCollectionData();
+}
+
+async function loadCollectionData() {
+    if (!rawDataState.currentCollection) return;
+    
+    try {
+        document.getElementById('emptyDataState').classList.add('hidden');
+        document.getElementById('dataTableBody').innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center py-8">
+                    <i class="fa-solid fa-spinner fa-spin text-emerald-400 mr-2"></i>
+                    Loading data...
+                </td>
+            </tr>
+        `;
+        
+        const response = await fetch(
+            `${API_URL}/admin/collection/${rawDataState.currentCollection}?page=${rawDataState.currentPage}&limit=10`,
+            { headers: { "Authorization": `Bearer ${token}` } }
+        );
+        
+        if (!response.ok) throw new Error("Failed to load collection data");
+        
+        const data = await response.json();
+        
+        // Update state
+        rawDataState.totalPages = data.total_pages;
+        rawDataState.totalDocuments = data.total_documents;
+        
+        // Update UI
+        updateDataTable(data.documents);
+        updatePaginationControls(data);
+        document.getElementById('collectionInfo').textContent = 
+            `${data.total_documents.toLocaleString()} documents • Page ${data.page} of ${data.total_pages}`;
+        
+    } catch (error) {
+        console.error('Error loading collection data:', error);
+        document.getElementById('dataTableBody').innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center py-8 text-red-400">
+                    <i class="fa-solid fa-exclamation-triangle mr-2"></i>
+                    Failed to load data
+                </td>
+            </tr>
+        `;
+        showNotification('Error', 'Failed to load collection data', 'error');
+    }
+}
+
+function updateDataTable(documents) {
+    const tbody = document.getElementById('dataTableBody');
+    
+    if (documents.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center py-8 text-emerald-200/50">
+                    <i class="fa-solid fa-inbox text-2xl mb-2"></i>
+                    <p>No documents found in this collection</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = documents.map(doc => {
+        const docString = JSON.stringify(doc);
+        const preview = docString.length > 100 ? docString.substring(0, 100) + '...' : docString;
+        
+        // Extraer el ID como string
+        let docId = 'N/A';
+        if (doc._id) {
+            docId = String(doc._id);
+        }
+        
+        return `
+            <tr class="hover:bg-white/5 transition">
+                <td class="font-mono text-xs text-emerald-300" title="${docId}">
+                    ${docId.substring(0, 20)}${docId.length > 20 ? '...' : ''}
+                </td>
+                <td>
+                    <div class="max-w-md truncate" title="${docString}">
+                        ${preview}
+                    </div>
+                </td>
+                <td>
+                    <button class="view-doc-btn glass px-3 py-1 rounded text-sm hover:bg-emerald-500/20 transition"
+                            data-doc-id="${docId}">
+                        <i class="fa-solid fa-expand mr-1"></i>Details
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function updatePaginationControls(data) {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const pageInfo = document.getElementById('pageInfo');
+    
+    prevBtn.disabled = !data.has_prev_page;
+    nextBtn.disabled = !data.has_next_page;
+    pageInfo.textContent = `Page ${data.page} of ${data.total_pages}`;
+}
+
+function previousPage() {
+    if (rawDataState.currentPage > 1) {
+        rawDataState.currentPage--;
+        loadCollectionData();
+    }
+}
+
+function nextPage() {
+    if (rawDataState.currentPage < rawDataState.totalPages) {
+        rawDataState.currentPage++;
+        loadCollectionData();
+    }
+}
+
+// View document details (USANDO EL MÉTODO ORIGINAL QUE FUNCIONA)
+async function viewDocument(documentId) {
+    if (!rawDataState.currentCollection || !documentId || documentId === 'N/A') {
+        showNotification('Error', 'Invalid document ID', 'error');
+        return;
+    }
+    
+    try {
+        // Switch to details tab
+        switchTab('details');
+        
+        const displayId = documentId.length > 20 ? documentId.substring(0, 20) + '...' : documentId;
+        document.getElementById('documentTitle').textContent = `Document: ${displayId}`;
+        document.getElementById('documentCollection').textContent = `Collection: ${rawDataState.currentCollection}`;
+        
+        // Mostrar loading
+        const viewer = document.getElementById('jsonViewer');
+        viewer.innerHTML = `
+            <div class="text-center py-8">
+                <i class="fa-solid fa-spinner fa-spin text-emerald-400 text-2xl mb-2"></i>
+                <p>Loading document...</p>
+            </div>
+        `;
+        
+        // Buscar el documento en los datos de la página actual (MÉTODO ORIGINAL)
+        const response = await fetch(
+            `${API_URL}/admin/collection/${rawDataState.currentCollection}?page=${rawDataState.currentPage}&limit=10`,
+            {
+                headers: { "Authorization": `Bearer ${token}` }
+            }
+        );
+        
+        if (!response.ok) {
+            throw new Error("Failed to load collection data");
+        }
+        
+        const data = await response.json();
+        
+        // Buscar el documento por ID
+        const doc = data.documents.find(d => {
+            const currentDocId = d._id ? String(d._id) : null;
+            return currentDocId === documentId;
+        });
+        
+        if (doc) {
+            displayJSON(doc);
+            showNotification('Success', 'Document loaded successfully', 'success');
+        } else {
+            throw new Error('Document not found in current page');
+        }
+        
+    } catch (error) {
+        console.error('Error viewing document:', error);
+        showNotification('Error', error.message, 'error');
+        
+        const viewer = document.getElementById('jsonViewer');
+        viewer.innerHTML = `
+            <div class="text-center py-8 text-red-400">
+                <i class="fa-solid fa-exclamation-triangle text-2xl mb-2"></i>
+                <p>${error.message}</p>
+                <p class="text-sm mt-2">Try navigating to the page where this document appears.</p>
+            </div>
+        `;
+    }
+}
+
+function displayJSON(data) {
+    const viewer = document.getElementById('jsonViewer');
+    const jsonString = JSON.stringify(data, null, 2);
+    
+    // Simple syntax highlighting
+    let highlighted = jsonString
+        .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g, match => {
+            if (/:$/.test(match)) {
+                return `<span class="json-key">${match}</span>`;
+            }
+            return `<span class="json-string">${match}</span>`;
+        })
+        .replace(/\b(true|false)\b/g, '<span class="json-boolean">$1</span>')
+        .replace(/\b(null)\b/g, '<span class="json-null">$1</span>')
+        .replace(/\b(\d+)\b/g, '<span class="json-number">$1</span>');
+    
+    viewer.innerHTML = `<pre>${highlighted}</pre>`;
+}
+
+function closeDocumentView() {
+    switchTab('data');
+}
+
+// ====================
+// EVENT DELEGATION FOR DOCUMENT VIEWING
+// ====================
+document.addEventListener('click', function(e) {
+    // Handle document view button clicks
+    if (e.target.closest('.view-doc-btn')) {
+        const button = e.target.closest('.view-doc-btn');
+        const documentId = button.getAttribute('data-doc-id');
+        viewDocument(documentId);
+    }
+});
+
+// ====================
+// USER MANAGEMENT
+// ====================
+
+// Cargar todos los usuarios
+async function getAllUsers() {
+    try {
+        const response = await fetch(`${API_URL}/admin/users`, {
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error("Failed to fetch users");
+        }
+        
+        const users = await response.json();
+        
+        // Actualizar contador
+        document.getElementById('totalUsers').textContent = users.length;
+        
+        // Mostrar/ocultar empty state
+        const emptyState = document.getElementById('emptyState');
+        const usersTable = document.getElementById('users-table');
+        
+        if (users.length === 0) {
+            emptyState.classList.remove('hidden');
+            usersTable.innerHTML = '';
+        } else {
+            emptyState.classList.add('hidden');
+            
+            // Generar tabla de usuarios
+            usersTable.innerHTML = users.map(user => `
+                <tr class="hover:bg-white/5 transition" data-user-id="${user._id}">
+                    <td class="p-4">
+                        <div class="text-sm font-mono text-emerald-200/70 truncate max-w-xs">
+                            ${user._id}
+                        </div>
+                    </td>
+                    <td class="p-4 font-medium">${user.username}</td>
+                    <td class="p-4 text-emerald-200/70">${user.email || 'N/A'}</td>
+                    <td class="p-4">
+                        <span class="px-2 py-1 rounded text-xs ${user.role === 'role_admin' ? 'bg-purple-500/20 text-purple-300' : 'bg-emerald-500/20 text-emerald-300'}">
+                            ${user.role}
+                        </span>
+                    </td>
+                    <td class="p-4 text-sm text-emerald-200/70">
+                        ${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td class="p-4">
+                        <div class="flex gap-2">
+                            <button onclick="editUser('${user._id}')" 
+                                    class="glass px-3 py-1 rounded text-sm hover:bg-emerald-500/20 transition">
+                                <i class="fa-solid fa-edit mr-1"></i>Edit
+                            </button>
+                            <button onclick="confirmDeleteUser('${user._id}', '${user.username}')" 
+                                    class="glass px-3 py-1 rounded text-sm hover:bg-red-500/20 text-red-300 transition">
+                                <i class="fa-solid fa-trash mr-1"></i>Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        showNotification('Users Loaded', `Loaded ${users.length} users`, 'success');
+        
+    } catch (error) {
+        console.error('Error loading users:', error);
+        showNotification('Error', 'Failed to load users', 'error');
+    }
+}
+
+// Crear nuevo usuario
+async function createUser() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const role = document.getElementById('role').value;
+    
+    if (!username || !password) {
+        showNotification('Validation Error', 'Username and password are required', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/register`, {
+            method: 'POST',
+            headers: { 
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ 
+                username, 
+                password,
+                role: role || "role_user"
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Registration failed');
+        }
+        
+        const data = await response.json();
+        
+        // Limpiar formulario
+        resetForm();
+        
+        // Recargar lista de usuarios
+        getAllUsers();
+        
+        showNotification('User Created', `User ${username} created successfully`, 'success');
+        
+    } catch (error) {
+        console.error('Error creating user:', error);
+        showNotification('Error', error.message, 'error');
+    }
+}
+
+// Editar usuario (cargar datos en formulario)
+async function editUser(userId) {
+    try {
+        const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error("Failed to fetch user data");
+        }
+        
+        const user = await response.json();
+        
+        // Llenar formulario con datos del usuario
+        document.getElementById('username').value = user.username;
+        document.getElementById('password').value = ''; // No mostrar contraseña
+        document.getElementById('role').value = user.role;
+        document.getElementById('selectedUserId').value = user._id;
+        
+        // Cambiar texto del botón
+        showNotification('Edit Mode', `Editing user: ${user.username}`, 'info');
+        
+    } catch (error) {
+        console.error('Error fetching user:', error);
+        showNotification('Error', 'Failed to load user data', 'error');
+    }
+}
+
+// Actualizar usuario existente
+async function updateUser() {
+    const userId = document.getElementById('selectedUserId').value;
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const role = document.getElementById('role').value;
+    
+    if (!userId) {
+        showNotification('Error', 'No user selected for update. Please select a user first.', 'warning');
+        return;
+    }
+    
+    if (!username) {
+        showNotification('Validation Error', 'Username is required', 'warning');
+        return;
+    }
+    
+    try {
+        // Preparar datos de actualización
+        const updateData = { username };
+        if (role) updateData.role = role;
+        if (password) updateData.password = password;
+        
+        const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+            method: 'PUT',
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(updateData)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Update failed');
+        }
+        
+        const updatedUser = await response.json();
+        
+        // Limpiar formulario
+        resetForm();
+        
+        // Recargar lista de usuarios
+        getAllUsers();
+        
+        showNotification('User Updated', `User ${updatedUser.username} updated successfully`, 'success');
+        
+    } catch (error) {
+        console.error('Error updating user:', error);
+        showNotification('Error', error.message, 'error');
+    }
+}
+
+// Confirmar eliminación de usuario
+function confirmDeleteUser(userId, username) {
+    if (confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+        deleteUser(userId);
+    }
+}
+
+// Eliminar usuario
+async function deleteUser(userId) {
+    try {
+        const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+            method: 'DELETE',
+            headers: { 
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Delete failed');
+        }
+        
+        // Recargar lista de usuarios
+        getAllUsers();
+        
+        // Limpiar formulario si el usuario eliminado estaba seleccionado
+        if (document.getElementById('selectedUserId').value === userId) {
+            resetForm();
+        }
+        
+        showNotification('User Deleted', 'User deleted successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        showNotification('Error', error.message, 'error');
+    }
+}
+
+// Limpiar formulario
+function resetForm() {
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('role').value = 'role_user';
+    document.getElementById('selectedUserId').value = '';
+}
+
+// ====================
+// INITIALIZATION
+// ====================
+document.addEventListener('DOMContentLoaded', async () => {
+    // Verificar acceso de admin
+    const isAdmin = await checkAdminAccess();
+    
+    if (isAdmin) {
+        // Cargar estado del sistema
+        await checkSystemStatus();
+        
+        // Cargar usuarios automáticamente
+        getAllUsers();
+        
+        // Cargar colecciones automáticamente
+        loadCollections();
+    }
+});
+</script>
+</body>
+</html>
