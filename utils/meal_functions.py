@@ -24,9 +24,7 @@ def extract_grams(measure) -> float | None:
 # ============================
 
 def calculate_meal_nutriscore(nutrients):
-    """
-    Calcula un NutriScore 0-100 sensible, usando escala logarítmica para grandes cantidades.
-    """
+    # 0 - 100
     energy = nutrients.get("energy_kcal", 0)
     fat = nutrients.get("fat", 0)
     carbs = nutrients.get("carbohydrates", 0)

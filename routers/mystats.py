@@ -9,7 +9,7 @@ router = APIRouter(prefix="/mystats", tags=["My Stats"])
 
 
 # =========================================================
-# REUTILIZAMOS LA MISMA LÓGICA QUE EN /versus
+# SAME LOGIC AS VERSUS
 # =========================================================
 
 
