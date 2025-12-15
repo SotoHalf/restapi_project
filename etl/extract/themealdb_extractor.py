@@ -103,7 +103,7 @@ class TheMealDBExtractor(BaseExtractor):
                 if not id_meal: continue
                 
                 #Check if already exists
-                if self.exists_in_db(f"{self.api_name}_raw",id_meal): 
+                if self.exists_in_db(f"{self.api_name}_raw","_id",int(id_meal)): 
                     continue
 
                 meal_data = self.get_data_by_id(id_meal)

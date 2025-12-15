@@ -1,9 +1,6 @@
 from pathlib import Path
 import pandas as pd
 from etl.utils.config_loader import Config
-import logging
-
-logger = logging.getLogger(__name__)
 
 def iter_csvs(base_path=None):
     base_path = Path(base_path or Config.get_export_path())

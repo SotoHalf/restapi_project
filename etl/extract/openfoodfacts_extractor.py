@@ -45,11 +45,21 @@ class OpenFoodFactsExtractor(BaseExtractor):
     
     def extract_raw(self):
         ingredients = self.get_unique_ingredients()
+        self.log(f"Total obtained ingredients from db {len(ingredients)}")
+
+        ingredients = [
+            ingredient
+            for ingredient in ingredients
+            if not self.exists_in_db("openfoodfacts_clean", "search_term", ingredient)
+        ]
+        self.log(f"Need to get {len(ingredients)}")
+
         rows = []
 
         self.log(f"Found {len(ingredients)} unique ingredients")
 
         for i, ingredient in enumerate(ingredients, start=1):
+
             self.log(f"Searching OFF for '{ingredient}' ({i}/{len(ingredients)})")
 
             products = self.search_products(ingredient)
@@ -61,7 +71,7 @@ class OpenFoodFactsExtractor(BaseExtractor):
                     continue
 
                 #avoid dups
-                if self.exists_in_db("openfoodfacts_raw", code):
+                if self.exists_in_db("openfoodfacts_raw", "_id", code):
                     continue
 
                 nutriments = p.get("nutriments", {})

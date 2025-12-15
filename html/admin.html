@@ -277,7 +277,8 @@ body {
                 </div>
                 <div>
                     <h3 class="text-emerald-200/80 text-sm">ETL Status</h3>
-                    <p class="text-lg text-emerald-300" id="etlStatus">Idle</p>
+                    <p>Api1:</p><p class="text-lg text-emerald-300" id="etlStatusApi1">Idle</p>
+                    <p>Api2:</p><p class="text-lg text-emerald-300" id="etlStatusApi2">Idle</p>
                 </div>
             </div>
         </div>
@@ -313,15 +314,24 @@ body {
             <div class="glass p-6 rounded-xl">
                 <h3 class="font-bold mb-4 flex items-center">
                     <i class="fa-solid fa-cloud-download-alt text-blue-300 mr-2"></i>
-                    Run API 1 ETL Process
+                    Run API 1 ETL Process (TheMealDB)
                 </h3>
+            
                 <p class="text-emerald-200/70 mb-4 text-sm">
                     Execute shell script and load CSV data into MongoDB
                 </p>
-                <button onclick="runETLAPI1()" class="btn-primary px-6 py-3 rounded-lg w-full">
+            
+                <button onclick="runETLAPI1()" id="runBtnApi1"
+                        class="btn-primary px-6 py-3 rounded-lg w-full">
                     <i class="fa-solid fa-play mr-2"></i>Run ETL Process
                 </button>
-                <div id="etlProgress" class="mt-4 hidden">
+            
+                <button onclick="cancelETLAPI1()" id="cancelBtnApi1"
+                        class="btn-danger px-6 py-3 rounded-lg w-full mt-2 hidden">
+                    <i class="fa-solid fa-stop mr-2"></i>Cancel ETL
+                </button>
+            
+                <div id="etlProgressApi1" class="mt-4 hidden">
                     <div class="flex items-center mb-2">
                         <i class="fa-solid fa-spinner fa-spin text-emerald-400 mr-2"></i>
                         <span class="text-sm text-emerald-300">Running ETL process...</span>
@@ -330,9 +340,63 @@ body {
                         <div class="bg-emerald-500 h-2 rounded-full animate-pulse" style="width: 60%"></div>
                     </div>
                 </div>
+            
+                <button onclick="getLastETLResultAPI1()" class="btn-secondary px-6 py-3 rounded-lg w-full mt-4">
+                    <i class="fa-solid fa-clock-rotate-left mr-2"></i>Last ETL Result
+                </button>
+            
+                <button onclick="getETLHistoryAPI1()" class="btn-secondary px-6 py-3 rounded-lg w-full mt-2">
+                    <i class="fa-solid fa-list mr-2"></i>ETL History
+                </button>
+            
+                <pre id="etlLogsApi1"
+                     class="mt-4 p-4 bg-gray-800 rounded-lg text-xs text-emerald-200 font-mono h-48 overflow-y-auto"></pre>
             </div>
             
             <div class="glass p-6 rounded-xl">
+                <h3 class="font-bold mb-4 flex items-center">
+                    <i class="fa-solid fa-cloud-download-alt text-blue-300 mr-2"></i>
+                    Run API 2 ETL Process (OpenFoodFacts)
+                </h3>
+            
+                <p class="text-emerald-200/70 mb-4 text-sm">
+                    Execute shell script and load CSV data into MongoDB
+                </p>
+            
+                <button onclick="runETLAPI2()" id="runBtnApi2"
+                        class="btn-primary px-6 py-3 rounded-lg w-full">
+                    <i class="fa-solid fa-play mr-2"></i>Run ETL Process
+                </button>
+            
+                <button onclick="cancelETLAPI2()" id="cancelBtnApi2"
+                        class="btn-danger px-6 py-3 rounded-lg w-full mt-2 hidden">
+                    <i class="fa-solid fa-stop mr-2"></i>Cancel ETL
+                </button>
+            
+                <div id="etlProgressApi2" class="mt-4 hidden">
+                    <div class="flex items-center mb-2">
+                        <i class="fa-solid fa-spinner fa-spin text-emerald-400 mr-2"></i>
+                        <span class="text-sm text-emerald-300">Running ETL process...</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2">
+                        <div class="bg-emerald-500 h-2 rounded-full animate-pulse" style="width: 60%"></div>
+                    </div>
+                </div>
+            
+                <button onclick="getLastETLResultAPI2()" class="btn-secondary px-6 py-3 rounded-lg w-full mt-4">
+                    <i class="fa-solid fa-clock-rotate-left mr-2"></i>Last ETL Result
+                </button>
+            
+                <button onclick="getETLHistoryAPI2()" class="btn-secondary px-6 py-3 rounded-lg w-full mt-2">
+                    <i class="fa-solid fa-list mr-2"></i>ETL History
+                </button>
+            
+                <pre id="etlLogsApi2"
+                     class="mt-4 p-4 bg-gray-800 rounded-lg text-xs text-emerald-200 font-mono h-48 overflow-y-auto"></pre>
+            </div>
+
+            <div class="col-span-2 flex justify-center">
+            <div class="glass p-6 rounded-xl w-full max-w-md">
                 <h3 class="font-bold mb-4 flex items-center">
                     <i class="fa-solid fa-chart-line text-purple-300 mr-2"></i>
                     System Information
@@ -351,6 +415,7 @@ body {
                         <span class="px-2 py-1 bg-emerald-500/20 rounded text-xs" id="roleInfo">admin</span>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     </section>
@@ -697,7 +762,7 @@ async function checkSystemStatus() {
         
         const data = await response.json();
         
-        // Actualizar UI
+        // update UI
         document.getElementById('systemStatus').textContent = data.status;
         document.getElementById('backendInfo').textContent = data.backend;
         document.getElementById('authInfo').textContent = data.authenticated_as;
@@ -711,48 +776,314 @@ async function checkSystemStatus() {
     }
 }
 
+// ====================
+// ETL API1
+// ====================
+
+document.addEventListener("DOMContentLoaded", () => {
+    refreshETLStatusApi1();
+});
+
+let logIntervalApi1 = null;
+
+async function fetchETLLogsApi1() {
+    const res = await fetch(`${API_URL}/admin/etl-api1/logs`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const logsDiv = document.getElementById("etlLogsApi1");
+
+    logsDiv.textContent = data.lines.join("\n");
+    logsDiv.scrollTop = logsDiv.scrollHeight;
+}
+
 async function runETLAPI1() {
-    const etlProgress = document.getElementById('etlProgress');
-    const etlStatus = document.getElementById('etlStatus');
-    
-    try {
-        // Mostrar progreso
-        etlProgress.classList.remove('hidden');
-        etlStatus.textContent = 'Running...';
-        etlStatus.className = 'text-lg text-yellow-400';
-        
-        const response = await fetch(`${API_URL}/admin/etl-api1`, {
-            method: 'POST',
-            headers: { 
-                "Authorization": `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'ETL process failed');
-        }
-        
-        const data = await response.json();
-        
-        // Actualizar UI
-        etlProgress.classList.add('hidden');
-        etlStatus.textContent = 'Completed';
-        etlStatus.className = 'text-lg text-emerald-400';
-        
-        showNotification('ETL Process', data.message || 'ETL executed successfully', 'success');
-        
-        // Recargar colecciones después del ETL
-        loadCollections();
-        
-    } catch (error) {
-        console.error('Error running ETL:', error);
-        etlProgress.classList.add('hidden');
-        etlStatus.textContent = 'Failed';
-        etlStatus.className = 'text-lg text-red-400';
-        showNotification('ETL Error', error.message, 'error');
+    const progress = document.getElementById("etlProgressApi1");
+    const runBtn = document.getElementById("runBtnApi1");
+    const cancelBtn = document.getElementById("cancelBtnApi1");
+
+    progress.classList.remove("hidden");
+
+    const res = await fetch(`${API_URL}/admin/etl-api1/run`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail);
+        progress.classList.add("hidden");
+        return;
+    }
+
+    runBtn.classList.add("hidden");
+    cancelBtn.classList.remove("hidden");
+
+    startApi1Polling();
+}
+
+async function cancelETLAPI1() {
+    if (!confirm("Cancel ETL process?")) return;
+
+    await fetch(`${API_URL}/admin/etl-api1/cancel`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    stopApi1Polling();
+    await refreshETLStatusApi1();
+}
+
+async function getLastETLResultAPI1() {
+    const res = await fetch(`${API_URL}/admin/etl-api1/results`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    document.getElementById("etlLogsApi1").textContent = data.message;
+}
+
+async function getETLHistoryAPI1() {
+    const res = await fetch(`${API_URL}/admin/etl-api1/history`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    document.getElementById("etlLogsApi1").textContent = data.messages.join("\n\n");
+}
+
+async function refreshETLStatusApi1() {
+    const res = await fetch(`${API_URL}/admin/etl-api1/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    const progress = document.getElementById("etlProgressApi1");
+    const runBtn = document.getElementById("runBtnApi1");
+    const cancelBtn = document.getElementById("cancelBtnApi1");
+    const etlStatus = document.getElementById("etlStatusApi1");
+
+    switch (data.status) {
+        case "accepted":
+        case "running":
+            etlStatus.textContent = "Running";
+            progress.classList.remove("hidden");
+            runBtn.classList.add("hidden");
+            cancelBtn.classList.remove("hidden");
+            startApi1Polling();
+            break;
+        case "cancelled":
+            etlStatus.textContent = "Cancelled";
+            progress.classList.add("hidden");
+            runBtn.classList.remove("hidden");
+            cancelBtn.classList.add("hidden");
+            stopApi1Polling();
+            break;
+        case "error":
+            etlStatus.textContent = "Failed";
+            progress.classList.add("hidden");
+            runBtn.classList.remove("hidden");
+            cancelBtn.classList.add("hidden");
+            stopApi1Polling();
+            break;
+        case "finished":
+            etlStatus.textContent = "Complete";
+            progress.classList.add("hidden");
+            runBtn.classList.remove("hidden");
+            cancelBtn.classList.add("hidden");
+            stopApi1Polling();
+            break;
+        default:
+            etlStatus.textContent = "Unknown";
+            progress.classList.add("hidden");
+            runBtn.classList.remove("hidden");
+            cancelBtn.classList.add("hidden");
+            stopApi1Polling();
+            break;
     }
 }
+
+
+function startApi1Polling() {
+    if (logIntervalApi1) return;
+
+    logIntervalApi1 = setInterval(async () => {
+        await refreshETLStatusApi1();
+        await fetchETLLogsApi1();
+    }, 2000);
+}
+
+function stopApi1Polling() {
+    if (logIntervalApi1) {
+        clearInterval(logIntervalApi1);
+        logIntervalApi1 = null;
+    }
+}
+
+// ====================
+// ETL API2
+// ====================
+
+document.addEventListener("DOMContentLoaded", () => {
+    refreshETLStatusApi2();
+});
+
+let logIntervalApi2 = null;
+
+async function fetchETLLogsApi2() {
+    const res = await fetch(`${API_URL}/admin/etl-api2/logs`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const logsDiv = document.getElementById("etlLogsApi2");
+
+    logsDiv.textContent = data.lines.join("\n");
+    logsDiv.scrollTop = logsDiv.scrollHeight;
+}
+
+async function runETLAPI2() {
+    const progress = document.getElementById("etlProgressApi2");
+    const runBtn = document.getElementById("runBtnApi2");
+    const cancelBtn = document.getElementById("cancelBtnApi2");
+
+    progress.classList.remove("hidden");
+
+    const res = await fetch(`${API_URL}/admin/etl-api2/run`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail);
+        progress.classList.add("hidden");
+        return;
+    }
+
+    runBtn.classList.add("hidden");
+    cancelBtn.classList.remove("hidden");
+
+    startApi2Polling();
+}
+
+async function cancelETLAPI2() {
+    if (!confirm("Cancel ETL process?")) return;
+
+    await fetch(`${API_URL}/admin/etl-api2/cancel`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    stopApi2Polling();
+    await refreshETLStatusApi2();
+}
+
+async function getLastETLResultAPI2() {
+    const res = await fetch(`${API_URL}/admin/etl-api2/results`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    document.getElementById("etlLogsApi2").textContent = data.message;
+}
+
+async function getETLHistoryAPI2() {
+    const res = await fetch(`${API_URL}/admin/etl-api2/history`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    document.getElementById("etlLogsApi2").textContent = data.messages.join("\n\n");
+}
+
+async function refreshETLStatusApi2() {
+    const res = await fetch(`${API_URL}/admin/etl-api2/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    const progress = document.getElementById("etlProgressApi2");
+    const runBtn = document.getElementById("runBtnApi2");
+    const cancelBtn = document.getElementById("cancelBtnApi2");
+    const etlStatus = document.getElementById("etlStatusApi2");
+
+    switch (data.status) {
+        case "accepted":
+        case "running":
+            etlStatus.textContent = "Running";
+            progress.classList.remove("hidden");
+            runBtn.classList.add("hidden");
+            cancelBtn.classList.remove("hidden");
+            startApi2Polling();
+            break;
+        case "cancelled":
+            etlStatus.textContent = "Cancelled";
+            progress.classList.add("hidden");
+            runBtn.classList.remove("hidden");
+            cancelBtn.classList.add("hidden");
+            stopApi2Polling();
+            break;
+        case "error":
+            etlStatus.textContent = "Failed";
+            progress.classList.add("hidden");
+            runBtn.classList.remove("hidden");
+            cancelBtn.classList.add("hidden");
+            stopApi2Polling();
+            break;
+        case "finished":
+            etlStatus.textContent = "Complete";
+            progress.classList.add("hidden");
+            runBtn.classList.remove("hidden");
+            cancelBtn.classList.add("hidden");
+            stopApi2Polling();
+            break;
+        default:
+            etlStatus.textContent = "Unknown";
+            progress.classList.add("hidden");
+            runBtn.classList.remove("hidden");
+            cancelBtn.classList.add("hidden");
+            stopApi2Polling();
+            break;
+    }
+}
+
+
+function startApi2Polling() {
+    if (logIntervalApi2) return;
+
+    logIntervalApi2 = setInterval(async () => {
+        await refreshETLStatusApi2();
+        await fetchETLLogsApi2();
+    }, 2000);
+}
+
+function stopApi2Polling() {
+    if (logIntervalApi2) {
+        clearInterval(logIntervalApi2);
+        logIntervalApi2 = null;
+    }
+}
+
 
 // ====================
 // RAW DATA EXPLORER

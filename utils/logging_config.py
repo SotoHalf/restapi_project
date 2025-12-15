@@ -17,6 +17,7 @@ def setup_logging():
                     "level": record.levelname,
                     "message": record.getMessage(),
                     "logger": record.name,
+                    "pid": getattr(record, "pid", record.process), # in case it's a sub process i want to specify
                     "raw": log_entry
                 }
                 # Use asyncio.create_task to run the async insert without blocking

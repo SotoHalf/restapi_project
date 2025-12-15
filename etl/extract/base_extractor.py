@@ -23,9 +23,9 @@ class BaseExtractor(ABC):
         self._raw_path.mkdir(parents=True, exist_ok=True)
         self._clean_path.mkdir(parents=True, exist_ok=True)
 
-    def exists_in_db(self, collection, _id):
+    def exists_in_db(self, collection, key, value):
         mongo_sync = mongo_cli.get_mongo_manager()
-        return mongo_sync.exists_in_db(collection, int(_id))
+        return mongo_sync.exists_in_db(collection, key, value)
     
     @property
     def raw_path(self):

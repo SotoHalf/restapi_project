@@ -17,6 +17,8 @@ def load_all_sync(loader, base_path=None):
         records = df_to_records(df)
         loader.insert(records, f"{api_name}_{mode}")
         mark_uploaded(csv_file)
+    
+    return loader.get_last_insert()
 
 # --- ASYNC ---
 async def load_all_async(loader, base_path=None):
@@ -24,4 +26,6 @@ async def load_all_async(loader, base_path=None):
         records = df_to_records(df)
         await loader.insert(records, f"{api_name}_{mode}")
         mark_uploaded(csv_file)
+
+    return loader.get_last_insert()
 

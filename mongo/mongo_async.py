@@ -1,15 +1,15 @@
-import logging
 import math
 from pymongo.errors import BulkWriteError
 
-
-logger = logging.getLogger(__name__)
+from etl.utils.log_etl import log_write 
 
 class MongoLoaderAsync:
 
     def __init__(self, client, db_name):
         self.db = client[db_name]
+        self.last_insert = ""
 
+    @staticmethod
     def clean_nan(records):
         def clean_value(value):
             if isinstance(value, float):
@@ -25,7 +25,6 @@ class MongoLoaderAsync:
 
         return [clean_value(record) for record in records]
 
-
     async def insert(self, records, collection):
         if not records:
             return
@@ -34,10 +33,15 @@ class MongoLoaderAsync:
 
         try:
             result = await self.db[collection].insert_many(records, ordered=False)
-            logger.info(f"[async] Inserted {len(result.inserted_ids)} docs into {collection}")
+            self.last_insert = f"[async] Inserted {len(result.inserted_ids)} docs into {collection}"
+            log_write("mongo", self.last_insert)
         except BulkWriteError as e:
-            # Filtra los errores de duplicado (código 11000)
+            # Filter 11000 dup error
             dup_errors = [err for err in e.details['writeErrors'] if err['code'] == 11000]
             inserted_count = len(records) - len(dup_errors)
-            logger.info(f"[async] Inserted {inserted_count} docs into {collection} (duplicates ignored)")
+            self.last_insert = f"[async] Inserted {inserted_count} docs into {collection} (duplicates ignored)"
+            log_write("mongo", self.last_insert)
+
+    def get_last_insert(self):
+        return self.last_insert
 
