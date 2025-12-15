@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Food Analytics – Health Map</title>
+<title>Food & Nutrition Hub - Healthy Meal Platform</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -12,7 +11,9 @@
 :root {
     --primary: #10b981;
     --primary-dark: #059669;
-    --primary-light: #d1fae5;
+    --secondary: #8b5cf6;
+    --danger: #ef4444;
+    --warning: #f59e0b;
 }
 
 body {
@@ -23,6 +24,7 @@ body {
         #022c22 100%);
     font-family: 'Inter', system-ui, sans-serif;
     color: white;
+    min-height: 100vh;
 }
 
 .glass {
@@ -49,126 +51,622 @@ body {
 }
 
 .card-hover { transition: all 0.3s ease; }
-.card-hover:hover { transform: translateY(-5px); }
+.card-hover:hover { transform: translateY(-3px); }
 
-#healthMap { height: 500px; border-radius: 12px; }
-.leaflet-container { background: transparent !important; }
-.leaflet-popup-content { color: #1f2937; }
+.btn-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    transition: all 0.3s ease;
+}
+
+.btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+}
+
+.input-field {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.input-field:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    outline: none;
+}
+
+/* Notification */
+.notification {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    padding: 16px 20px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    transform: translateX(120%) scale(0.9);
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+                opacity 0.3s ease;
+    opacity: 0;
+    border-left: 4px solid #10b981;
+}
+
+.notification.show {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+}
+
+/* Map Styling */
+#healthMap {
+    height: 500px;
+    border-radius: 14px;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.leaflet-container {
+    border-radius: 14px;
+}
+
+/* Nutrition Score Badge */
+.nutri-score {
+    font-weight: bold;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.score-a { background: linear-gradient(135deg, #10b981, #059669); }
+.score-b { background: linear-gradient(135deg, #34d399, #10b981); }
+.score-c { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.score-d { background: linear-gradient(135deg, #f97316, #ea580c); }
+.score-e { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+/* Progress Bar */
+.progress-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(16, 185, 129, 0.5);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(16, 185, 129, 0.7);
+}
+
+/* Tab System */
+.tab-button {
+    background: transparent;
+    border: none;
+    padding: 12px 24px;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-button.active {
+    color: white;
+    border-bottom-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.tab-button:hover:not(.active) {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-content { display: block; }
+.tab-content.hidden { display: none; }
 </style>
 </head>
 
 <body class="min-h-screen p-4 md:p-8">
 
-<!-- Main container -->
+<!-- Notification Toast -->
+<div id="notification" class="notification">
+    <div class="flex items-center">
+        <i id="notificationIcon" class="fa-solid fa-check-circle text-xl mr-3 text-emerald-500"></i>
+        <div class="flex-1">
+            <p id="notificationTitle" class="font-bold text-gray-800">Success!</p>
+            <p id="notificationMessage" class="text-gray-600 text-sm mt-0.5">Operation completed successfully.</p>
+        </div>
+        <button onclick="hideNotification()" class="ml-4 text-gray-400 hover:text-gray-600">
+            <i class="fa-solid fa-times"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Navbar -->
+<nav class="glass-strong rounded-2xl px-6 py-4 flex justify-between items-center mb-8">
+    <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
+            <i class="fa-solid fa-apple-whole text-white"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-bold gradient-text">Food & Nutrition Hub</h1>
+            <p class="text-sm text-emerald-200/70">Healthy Meal Discovery Platform</p>
+        </div>
+    </div>
+    <div class="flex gap-4 items-center">
+        <span id="userInfo" class="text-emerald-300">Loading...</span>
+        <span id="userRole" class="px-2 py-1 bg-emerald-500/20 rounded text-xs text-emerald-300">user</span>
+        <button id="adminBtn" onclick="goToAdmin()" class="glass px-4 py-2 rounded-lg text-purple-300 hover:text-white hover:bg-purple-500/10 transition flex items-center hidden">
+            <i class="fa-solid fa-shield mr-2"></i>Admin Dashboard
+        </button>
+        <button onclick="logout()" class="glass px-4 py-2 rounded-lg text-red-300 hover:text-white hover:bg-red-500/10 transition flex items-center">
+            <i class="fa-solid fa-right-from-bracket mr-2"></i>Logout
+        </button>
+    </div>
+</nav>
+
+<!-- Main Content -->
 <main class="max-w-7xl mx-auto space-y-8">
 
-    <!-- Header -->
+    <!-- Welcome Section -->
     <section class="glass-strong rounded-2xl p-8">
-        <div class="flex items-center justify-between mb-6">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6">
             <div>
-                <h1 class="text-3xl font-bold gradient-text mb-2">🌍 Global Health Map</h1>
-                <p class="text-emerald-200/80">Nutrition analysis by country based on popular recipes</p>
+                <h2 class="text-3xl font-bold mb-2">Welcome to Your Nutrition Hub</h2>
+                <p class="text-emerald-200/70">Discover healthy meals, compare dishes, and build your perfect meal plan</p>
             </div>
-            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
-                <i class="fa-solid fa-globe-americas text-white text-2xl"></i>
+            <div class="flex gap-3 mt-4 md:mt-0">
+                <button onclick="getUserStats()" class="glass px-4 py-2 rounded-lg hover:bg-emerald-500/10 transition">
+                    <i class="fa-solid fa-chart-line mr-2"></i>My Stats
+                </button>
+                <button onclick="showFeatureInfo()" class="glass px-4 py-2 rounded-lg hover:bg-blue-500/10 transition">
+                    <i class="fa-solid fa-info-circle mr-2"></i>How It Works
+                </button>
             </div>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="glass p-4 rounded-xl">
-                <p class="text-sm text-emerald-200/70">Countries Analyzed</p>
-                <p class="text-2xl font-bold" id="countriesCount">0</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass p-6 rounded-xl card-hover">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center mr-4">
+                        <i class="fa-solid fa-heart-pulse text-emerald-300 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg">Health Score</h3>
+                        <p class="text-emerald-200/70 text-sm">NutriScore Rating System</p>
+                    </div>
+                </div>
+                <p class="text-sm text-emerald-200/80">
+                    All meals are scored 1-100 based on protein, fat, salt, and calories.
+                    Higher scores mean healthier options!
+                </p>
             </div>
-            <div class="glass p-4 rounded-xl">
-                <p class="text-sm text-emerald-200/70">Total Recipes</p>
-                <p class="text-2xl font-bold" id="recipesCount">0</p>
+            
+            <div class="glass p-6 rounded-xl card-hover">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center mr-4">
+                        <i class="fa-solid fa-database text-blue-300 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg">Smart Database</h3>
+                        <p class="text-emerald-200/70 text-sm">Real Nutritional Data</p>
+                    </div>
+                </div>
+                <p class="text-sm text-emerald-200/80">
+                    Powered by OpenFoodFacts and TheMealDB with accurate nutrient calculations
+                    for thousands of ingredients.
+                </p>
             </div>
-            <div class="glass p-4 rounded-xl">
-                <p class="text-sm text-emerald-200/70">Top Country</p>
-                <p class="text-2xl font-bold gradient-text" id="topCountry">-</p>
-            </div>
-            <div class="glass p-4 rounded-xl">
-                <p class="text-sm text-emerald-200/70">Avg Health Score</p>
-                <p class="text-2xl font-bold" id="avgScore">0</p>
+            
+            <div class="glass p-6 rounded-xl card-hover">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center mr-4">
+                        <i class="fa-solid fa-globe-americas text-purple-300 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg">Global Recipes</h3>
+                        <p class="text-emerald-200/70 text-sm">From 30+ Countries</p>
+                    </div>
+                </div>
+                <p class="text-sm text-emerald-200/80">
+                    Discover healthy dishes from around the world and see which countries
+                    have the healthiest cuisines.
+                </p>
             </div>
         </div>
     </section>
 
-    <!-- Map & Ranking -->
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Interactive Map -->
-        <div class="lg:col-span-2">
-            <div class="glass-strong rounded-2xl p-6 card-hover">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-xl font-bold flex items-center">
-                        <i class="fa-solid fa-map text-emerald-300 mr-3"></i>
-                        Interactive Health Map
-                    </h2>
-                    <div class="flex gap-2">
-                        <button onclick="loadSimulatedData()" class="glass px-4 py-2 rounded-lg text-sm hover:bg-emerald-500/10">
-                            <i class="fa-solid fa-dice mr-1"></i> Simulate Data
-                        </button>
-                        <button onclick="loadRealData()" class="btn-primary px-4 py-2 rounded-lg text-sm">
-                            <i class="fa-solid fa-database mr-1"></i> Load Real Data
-                        </button>
-                    </div>
-                </div>
-                <div id="healthMap"></div>
-                <div class="flex justify-center mt-4 space-x-4">
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 rounded-full bg-red-500/70 mr-2"></div>
-                        <span class="text-sm">Low (0-40)</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 rounded-full bg-yellow-500/70 mr-2"></div>
-                        <span class="text-sm">Medium (41-70)</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 rounded-full bg-green-500/70 mr-2"></div>
-                        <span class="text-sm">High (71-100)</span>
-                    </div>
-                </div>
+    <!-- Feature Tabs -->
+    <section class="glass-strong rounded-2xl overflow-hidden">
+        <div class="border-b border-white/10">
+            <div class="flex overflow-x-auto">
+                <button id="tabHealthMap" class="tab-button active" onclick="switchTab('healthMap')">
+                    <i class="fa-solid fa-map mr-2"></i>Health Map
+                </button>
+                <button id="tabMealBuilder" class="tab-button" onclick="switchTab('mealBuilder')">
+                    <i class="fa-solid fa-utensils mr-2"></i>Meal Builder
+                </button>
+                <button id="tabIngredientComparison" class="tab-button" onclick="switchTab('ingredientComparison')">
+                    <i class="fa-solid fa-scale-balanced mr-2"></i>Ingredient Comparison
+                </button>
+                <button id="tabNutrientFilters" class="tab-button" onclick="switchTab('nutrientFilters')">
+                    <i class="fa-solid fa-filter mr-2"></i>Nutrient Filters
+                </button>
             </div>
         </div>
-
-        <!-- Top Rankings -->
-        <div>
-            <div class="glass-strong rounded-2xl p-6 card-hover h-full">
-                <h2 class="text-xl font-bold mb-6 flex items-center">
-                    <i class="fa-solid fa-trophy text-yellow-400 mr-3"></i>
-                    Top 10 Healthiest Countries
-                </h2>
-                <div id="rankingList" class="space-y-3">
-                    <!-- Dynamic content will be loaded here -->
+        
+        <div class="p-8">
+            
+            <!-- Tab 1: Health Map -->
+            <div id="tabContentHealthMap" class="tab-content">
+                <div class="mb-6">
+                    <h3 class="text-2xl font-bold mb-2">Global Health Map</h3>
+                    <p class="text-emerald-200/70 mb-6">
+                        Discover which countries have the healthiest traditional dishes based on average NutriScore.
+                        Click on a country to see details.
+                    </p>
+                    
+                    <div class="flex gap-3 mb-6">
+                        <button onclick="loadHealthMap()" class="btn-primary px-4 py-2 rounded-lg">
+                            <i class="fa-solid fa-rotate-right mr-2"></i>Refresh Map
+                        </button>
+                        <button onclick="recalculateMap()" class="btn-secondary px-4 py-2 rounded-lg" id="recalculateBtn">
+                            <i class="fa-solid fa-calculator mr-2"></i>Recalculate Scores
+                        </button>
+                        <div class="glass px-4 py-2 rounded-lg">
+                            <i class="fa-solid fa-circle-info mr-2 text-emerald-300"></i>
+                            <span id="mapStats">Loading...</span>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="mt-8 glass p-4 rounded-xl">
-                    <h3 class="font-bold mb-2 flex items-center">
-                        <i class="fa-solid fa-calculator text-emerald-300 mr-2"></i>
-                        Health Score Formula
-                    </h3>
-                    <p class="text-sm text-emerald-200/80">
-                        Score = (Nutrition × 0.4) + (Balance × 0.3) + (Variety × 0.2) + (Freshness × 0.1)
+                <!-- Map Container -->
+                <div id="healthMap" class="mb-6"></div>
+                
+                <!-- Country Rankings -->
+                <div class="glass rounded-xl p-6">
+                    <h4 class="font-bold mb-4 flex items-center">
+                        <i class="fa-solid fa-trophy text-yellow-400 mr-2"></i>
+                        Top 10 Healthiest Countries
+                    </h4>
+                    <div id="countryRankings" class="space-y-3">
+                        <!-- Rankings will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 2: Meal Builder -->
+            <div id="tabContentMealBuilder" class="tab-content hidden">
+                <div class="mb-6">
+                    <h3 class="text-2xl font-bold mb-2">Build Your Perfect Meal</h3>
+                    <p class="text-emerald-200/70 mb-6">
+                        Enter up to 5 ingredients you have, and we'll find the healthiest recipes you can make!
                     </p>
                 </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Country Details & Charts -->
-    <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Country Details -->
-        <div class="glass-strong rounded-2xl p-6 card-hover">
-            <h2 class="text-xl font-bold mb-6 flex items-center">
-                <i class="fa-solid fa-flag text-emerald-300 mr-3"></i>
-                Selected Country Analysis
-            </h2>
-            <div id="countryDetails" class="space-y-4">
-                <div class="text-center py-12 text-emerald-200/50">
-                    <i class="fa-solid fa-globe text-4xl mb-4"></i>
-                    <p>Click on a country to see detailed analysis</p>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-1">
+                        <div class="glass rounded-xl p-6">
+                            <h4 class="font-bold mb-4">Ingredient Input</h4>
+                            
+                            <div class="space-y-4">
+                                <div id="ingredientInputs">
+                                    <div class="flex gap-2 mb-3">
+                                        <input type="text" class="input-field flex-1 px-4 py-3 rounded-lg" 
+                                               placeholder="e.g., chicken, rice, tomato" 
+                                               id="ingredient1">
+                                        <button onclick="addIngredientField()" class="glass px-4 py-3 rounded-lg hover:bg-emerald-500/10">
+                                            <i class="fa-solid fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-sm text-emerald-200/70 mb-4">
+                                    <i class="fa-solid fa-lightbulb mr-2"></i>
+                                    Tip: Use specific ingredients like "chicken breast" instead of just "chicken"
+                                </div>
+                                
+                                <button onclick="findMealsByIngredients()" class="btn-primary w-full py-3 rounded-lg">
+                                    <i class="fa-solid fa-search mr-2"></i>Find Healthy Meals
+                                </button>
+                            </div>
+                            
+                            <!-- Popular Ingredients -->
+                            <div class="mt-6 pt-6 border-t border-white/10">
+                                <h5 class="font-medium mb-3">Popular Healthy Ingredients:</h5>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="glass px-3 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-emerald-500/20 transition" 
+                                          onclick="addPopularIngredient('salmon')">salmon</span>
+                                    <span class="glass px-3 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-emerald-500/20 transition" 
+                                          onclick="addPopularIngredient('spinach')">spinach</span>
+                                    <span class="glass px-3 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-emerald-500/20 transition" 
+                                          onclick="addPopularIngredient('quinoa')">quinoa</span>
+                                    <span class="glass px-3 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-emerald-500/20 transition" 
+                                          onclick="addPopularIngredient('avocado')">avocado</span>
+                                    <span class="glass px-3 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-emerald-500/20 transition" 
+                                          onclick="addPopularIngredient('lentils')">lentils</span>
+                                    <span class="glass px-3 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-emerald-500/20 transition" 
+                                          onclick="addPopularIngredient('sweet potato')">sweet potato</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="lg:col-span-2">
+                        <div class="glass rounded-xl p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h4 class="font-bold">Found Meals</h4>
+                                <div class="text-sm text-emerald-300" id="mealsFoundCount">
+                                    0 meals found
+                                </div>
+                            </div>
+                            
+                            <div id="mealResults" class="space-y-4">
+                                <div class="text-center py-12 text-emerald-200/50">
+                                    <i class="fa-solid fa-utensils text-4xl mb-4"></i>
+                                    <p>Enter ingredients to find healthy meals</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+            
+            <!-- Tab 3: Ingredient Comparison -->
+            <div id="tabContentIngredientComparison" class="tab-content hidden">
+                <div class="mb-6">
+                    <h3 class="text-2xl font-bold mb-2">Compare Meals Head-to-Head</h3>
+                    <p class="text-emerald-200/70 mb-6">
+                        Enter two meal IDs to compare their nutritional value and see which one is healthier.
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Left Column - Input -->
+                    <div class="glass rounded-xl p-6">
+                        <h4 class="font-bold mb-4">Compare Two Meals</h4>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-sm text-emerald-200/80 mb-2">First Meal ID</label>
+                                <input type="number" id="meal1Id" 
+                                       class="input-field w-full px-4 py-3 rounded-lg"
+                                       placeholder="e.g., 52772 (Chicken Curry)" 
+                                       min="1">
+                                <div class="text-xs text-emerald-200/50 mt-1">
+                                    Find meal IDs in the Meal Builder tab
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm text-emerald-200/80 mb-2">Second Meal ID</label>
+                                <input type="number" id="meal2Id" 
+                                       class="input-field w-full px-4 py-3 rounded-lg"
+                                       placeholder="e.g., 52768 (Beef Wellington)" 
+                                       min="1">
+                            </div>
+                            
+                            <button onclick="compareMeals()" class="btn-primary w-full py-3 rounded-lg">
+                                <i class="fa-solid fa-scale-balanced mr-2"></i>Compare Meals
+                            </button>
+                        </div>
+                        
+                        <!-- Sample Meal IDs -->
+                        <div class="mt-6 pt-6 border-t border-white/10">
+                            <h5 class="font-medium mb-3">Popular Meal IDs to Compare:</h5>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="glass px-3 py-2 rounded-lg cursor-pointer hover:bg-emerald-500/10 transition" 
+                                     onclick="setMealIds(52772, 53151)">
+                                    <div class="font-medium text-sm">52772 vs 52768</div>
+                                    <div class="text-xs text-emerald-200/60">Teriyaki Chicken Casserole vs Paella</div>
+                                </div>
+                                <div class="glass px-3 py-2 rounded-lg cursor-pointer hover:bg-emerald-500/10 transition" 
+                                     onclick="setMealIds(52773, 52774)">
+                                    <div class="font-medium text-sm">52773 vs 52774</div>
+                                    <div class="text-xs text-emerald-200/60">Honey Teriyaki Salmon vs Pad See Ew</div>
+                                </div>
+                                <div class="glass px-3 py-2 rounded-lg cursor-pointer hover:bg-emerald-500/10 transition" 
+                                     onclick="setMealIds(52775, 53195)">
+                                    <div class="font-medium text-sm">52775 vs 53195</div>
+                                    <div class="text-xs text-emerald-200/60">Vegan Lasagna vs Thai curry noodle soup</div>
+                                </div>
+                                <div class="glass px-3 py-2 rounded-lg cursor-pointer hover:bg-emerald-500/10 transition" 
+                                     onclick="setMealIds(53013, 53212)">
+                                    <div class="font-medium text-sm">53013 vs 53212</div>
+                                    <div class="text-xs text-emerald-200/60">Big Mac vs Thai drumsticks</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column - Results -->
+                    <div class="glass rounded-xl p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="font-bold">Comparison Results</h4>
+                            <div id="comparisonWinner" class="text-sm font-medium px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 hidden">
+                                Winner: Loading...
+                            </div>
+                        </div>
+                        
+                        <div id="comparisonResults" class="space-y-6">
+                            <div class="text-center py-12 text-emerald-200/50">
+                                <i class="fa-solid fa-scale-balanced text-4xl mb-4"></i>
+                                <p>Enter two meal IDs to compare them</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 4: Nutrient Filters -->
+            <div id="tabContentNutrientFilters" class="tab-content hidden">
+                <div class="mb-6">
+                    <h3 class="text-2xl font-bold mb-2">Filter Meals by Nutrients</h3>
+                    <p class="text-emerald-200/70 mb-6">
+                        Set your nutritional requirements and find meals that match your dietary goals.
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Filters Panel -->
+                    <div class="glass rounded-xl p-6">
+                        <h4 class="font-bold mb-4">Set Your Filters</h4>
+                        
+                        <div class="space-y-6">
+                            <!-- Calories -->
+                            <div>
+                                <label class="block text-sm text-emerald-200/80 mb-2">
+                                    <i class="fa-solid fa-fire mr-2"></i>Max Calories (kcal)
+                                </label>
+                                <input type="range" id="caloriesRange" min="0" max="2000" value="2000" 
+                                       class="w-full h-2 bg-emerald-900 rounded-lg appearance-none cursor-pointer">
+                                <div class="flex justify-between mt-2">
+                                    <span class="text-xs text-emerald-200/60">0 kcal</span>
+                                    <span class="text-sm font-medium" id="caloriesValue">2000 kcal</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Protein -->
+                            <div>
+                                <label class="block text-sm text-emerald-200/80 mb-2">
+                                    <i class="fa-solid fa-dumbbell mr-2"></i>Min Protein (g)
+                                </label>
+                                <input type="range" id="proteinRange" min="0" max="100" value="0" 
+                                       class="w-full h-2 bg-emerald-900 rounded-lg appearance-none cursor-pointer">
+                                <div class="flex justify-between mt-2">
+                                    <span class="text-xs text-emerald-200/60">0g</span>
+                                    <span class="text-sm font-medium" id="proteinValue">0g</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Fat -->
+                            <div>
+                                <label class="block text-sm text-emerald-200/80 mb-2">
+                                    <i class="fa-solid fa-oil-can mr-2"></i>Max Fat (g)
+                                </label>
+                                <input type="range" id="fatRange" min="0" max="100" value="100" 
+                                       class="w-full h-2 bg-emerald-900 rounded-lg appearance-none cursor-pointer">
+                                <div class="flex justify-between mt-2">
+                                    <span class="text-xs text-emerald-200/60">0g</span>
+                                    <span class="text-sm font-medium" id="fatValue">100g</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Carbs -->
+                            <div>
+                                <label class="block text-sm text-emerald-200/80 mb-2">
+                                    <i class="fa-solid fa-bread-slice mr-2"></i>Max Carbs (g)
+                                </label>
+                                <input type="range" id="carbsRange" min="0" max="200" value="200" 
+                                       class="w-full h-2 bg-emerald-900 rounded-lg appearance-none cursor-pointer">
+                                <div class="flex justify-between mt-2">
+                                    <span class="text-xs text-emerald-200/60">0g</span>
+                                    <span class="text-sm font-medium" id="carbsValue">200g</span>
+                                </div>
+                            </div>
+                            
+                            <button onclick="filterMealsByNutrients()" class="btn-primary w-full py-3 rounded-lg">
+                                <i class="fa-solid fa-filter mr-2"></i>Apply Filters
+                            </button>
+                            
+                            <button onclick="resetFilters()" class="glass w-full py-3 rounded-lg hover:bg-emerald-500/10 transition">
+                                <i class="fa-solid fa-rotate-left mr-2"></i>Reset All Filters
+                            </button>
+                        </div>
+                        
+                        <!-- Diet Presets -->
+                        <div class="mt-6 pt-6 border-t border-white/10">
+                            <h5 class="font-medium mb-3">Diet Presets:</h5>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="setLowCarbPreset()" class="glass px-3 py-2 rounded-lg hover:bg-emerald-500/10 transition text-sm">
+                                    <i class="fa-solid fa-wheat-awn mr-1"></i>Low Carb
+                                </button>
+                                <button onclick="setHighProteinPreset()" class="glass px-3 py-2 rounded-lg hover:bg-emerald-500/10 transition text-sm">
+                                    <i class="fa-solid fa-dumbbell mr-1"></i>High Protein
+                                </button>
+                                <button onclick="setLowFatPreset()" class="glass px-3 py-2 rounded-lg hover:bg-emerald-500/10 transition text-sm">
+                                    <i class="fa-solid fa-oil-can mr-1"></i>Low Fat
+                                </button>
+                                <button onclick="setLowCaloriePreset()" class="glass px-3 py-2 rounded-lg hover:bg-emerald-500/10 transition text-sm">
+                                    <i class="fa-solid fa-fire mr-1"></i>Low Calorie
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Results Panel -->
+                    <div class="lg:col-span-2">
+                        <div class="glass rounded-xl p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h4 class="font-bold">Matching Meals</h4>
+                                <div class="text-sm text-emerald-300" id="filterStats">
+                                    0 meals match your criteria
+                                </div>
+                            </div>
+                            
+                            <div id="filteredMeals" class="space-y-4">
+                                <div class="text-center py-12 text-emerald-200/50">
+                                    <i class="fa-solid fa-filter-circle-xmark text-4xl mb-4"></i>
+                                    <p>Apply filters to find matching meals</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
         </div>
     </section>
 
@@ -176,628 +674,1171 @@ body {
 
 <script>
 // ====================
-// HEALTH SCORE ALGORITHM
+// CONFIGURATION
 // ====================
-class HealthScoreCalculator {
-    /**
-     * Calculate health score for a country based on its recipes
-     * @param {Array} recipes - List of recipes from the country
-     * @returns {Object} - Score breakdown and total score
-     */
-    calculateCountryScore(recipes) {
-        if (!recipes || recipes.length === 0) return { total: 0, breakdown: {} };
+const API_URL = "http://127.0.0.1:8000";
+let CURRENT_USER = null;
+let map = null;
+let healthMapData = null;
 
-        const scores = recipes.map(recipe => this.calculateRecipeScore(recipe));
-        
-        // Weighted average based on recipe popularity
-        const avgNutrition = this.weightedAverage(scores, 'nutrition', recipes);
-        const avgBalance = this.weightedAverage(scores, 'balance', recipes);
-        const avgVariety = this.weightedAverage(scores, 'variety', recipes);
-        const avgFreshness = this.weightedAverage(scores, 'freshness', recipes);
+// ====================
+// AUTH & INITIALIZATION
+// ====================
+const token = localStorage.getItem("access_token");
+if (!token) {
+    window.location.href = "/";
+}
 
-        // Final weighted score
-        const total = (
-            avgNutrition * 0.4 +
-            avgBalance * 0.3 +
-            avgVariety * 0.2 +
-            avgFreshness * 0.1
-        );
-
-        return {
-            total: Math.round(total),
-            breakdown: {
-                nutrition: Math.round(avgNutrition),
-                balance: Math.round(avgBalance),
-                variety: Math.round(avgVariety),
-                freshness: Math.round(avgFreshness)
-            },
-            recipeCount: recipes.length
-        };
-    }
-
-    /**
-     * Calculate individual recipe score
-     */
-    calculateRecipeScore(recipe) {
-        // Nutrition Score (0-100): Based on macro/micro nutrients
-        const nutritionScore = this.calculateNutritionScore(recipe.ingredients);
-        
-        // Balance Score (0-100): Protein/Carbs/Fat ratio
-        const balanceScore = this.calculateBalanceScore(recipe.nutrition);
-        
-        // Variety Score (0-100): Number of different food groups
-        const varietyScore = this.calculateVarietyScore(recipe.ingredients);
-        
-        // Freshness Score (0-100): Based on processed vs fresh ingredients
-        const freshnessScore = this.calculateFreshnessScore(recipe.ingredients);
-
-        return { nutritionScore, balanceScore, varietyScore, freshnessScore };
-    }
-
-    /**
-     * Nutrition: Analyze vitamins, minerals, fiber content
-     */
-    calculateNutritionScore(ingredients) {
-        let score = 50; // Base score
-        
-        // Positive factors
-        const positiveFactors = {
-            'vegetable': 15,
-            'fruit': 12,
-            'whole_grain': 10,
-            'lean_protein': 8,
-            'legume': 10,
-            'nut': 8,
-            'seed': 6,
-            'herb': 5
-        };
-
-        // Negative factors
-        const negativeFactors = {
-            'processed': -20,
-            'sugar': -15,
-            'saturated_fat': -12,
-            'refined_grain': -10,
-            'artificial': -25
-        };
-
-        ingredients.forEach(ing => {
-            const factor = ing.health_factor || 'neutral';
-            if (positiveFactors[factor]) score += positiveFactors[factor];
-            if (negativeFactors[factor]) score += negativeFactors[factor];
+async function initializeUser() {
+    try {
+        const response = await fetch(`${API_URL}/users/me`, {
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
         });
-
-        return Math.max(0, Math.min(100, score));
-    }
-
-    /**
-     * Balance: Ideal macronutrient distribution
-     */
-    calculateBalanceScore(nutrition) {
-        const idealRatios = {
-            protein: 0.25,  // 25%
-            carbs: 0.50,    // 50%
-            fat: 0.25       // 25%
-        };
-
-        const total = nutrition.protein + nutrition.carbs + nutrition.fat;
-        if (total === 0) return 50;
-
-        const actualRatios = {
-            protein: nutrition.protein / total,
-            carbs: nutrition.carbs / total,
-            fat: nutrition.fat / total
-        };
-
-        // Calculate deviation from ideal
-        let deviation = 0;
-        for (const nutrient in idealRatios) {
-            deviation += Math.abs(actualRatios[nutrient] - idealRatios[nutrient]);
+        
+        if (!response.ok) {
+            throw new Error("Not authenticated");
         }
-
-        // Convert deviation to score (0-100)
-        return Math.max(0, 100 - (deviation * 200));
-    }
-
-    /**
-     * Variety: Different food groups represented
-     */
-    calculateVarietyScore(ingredients) {
-        const foodGroups = new Set();
-        const groupMapping = {
-            'vegetable': 'vegetable',
-            'fruit': 'fruit',
-            'grain': 'grain',
-            'protein': 'protein',
-            'dairy': 'dairy',
-            'fat': 'fat'
-        };
-
-        ingredients.forEach(ing => {
-            if (groupMapping[ing.category]) {
-                foodGroups.add(groupMapping[ing.category]);
-            }
-        });
-
-        // Score based on number of different food groups
-        const groupCount = foodGroups.size;
-        if (groupCount >= 5) return 100;
-        if (groupCount === 4) return 80;
-        if (groupCount === 3) return 60;
-        if (groupCount === 2) return 40;
-        return 20;
-    }
-
-    /**
-     * Freshness: Minimally processed ingredients
-     */
-    calculateFreshnessScore(ingredients) {
-        let freshCount = 0;
-        let processedCount = 0;
-
-        ingredients.forEach(ing => {
-            if (ing.is_fresh || ing.category === 'vegetable' || ing.category === 'fruit') {
-                freshCount++;
-            }
-            if (ing.is_processed) {
-                processedCount++;
-            }
-        });
-
-        const total = ingredients.length;
-        if (total === 0) return 50;
-
-        const freshRatio = freshCount / total;
-        const processedRatio = processedCount / total;
-
-        return Math.max(0, Math.min(100, (freshRatio * 100) - (processedRatio * 50) + 50));
-    }
-
-    /**
-     * Helper: Weighted average calculation
-     */
-    weightedAverage(scores, metric, recipes) {
-        const totalWeight = recipes.reduce((sum, recipe) => sum + (recipe.popularity || 1), 0);
-        const weightedSum = scores.reduce((sum, score, idx) => {
-            const weight = recipes[idx].popularity || 1;
-            return sum + score[`${metric}Score`] * weight;
-        }, 0);
         
-        return totalWeight > 0 ? weightedSum / totalWeight : 0;
+        CURRENT_USER = await response.json();
+        
+        // Update UI
+        document.getElementById('userInfo').textContent = CURRENT_USER.username;
+        document.getElementById('userRole').textContent = CURRENT_USER.role.replace('role_', '');
+        
+        // Show admin button if user is admin
+        if (CURRENT_USER.role === 'role_admin') {
+            document.getElementById('adminBtn').classList.remove('hidden');
+        }
+        
+        // Load initial data
+        loadHealthMap();
+        
+    } catch (error) {
+        console.error('Auth error:', error);
+        window.location.href = "/";
     }
 }
 
 // ====================
-// DATA SIMULATION & MANAGEMENT
+// NOTIFICATION SYSTEM
 // ====================
-class HealthMapManager {
-    constructor() {
-        this.calculator = new HealthScoreCalculator();
-        this.countryData = new Map();
-        this.map = null;
-        this.selectedCountry = null;
-        
-        // Sample country data with simulated recipes
-        this.sampleCountries = [
-            {
-                code: 'JP',
-                name: 'Japan',
-                recipes: [
-                    {
-                        name: 'Miso Soup',
-                        ingredients: [
-                            { name: 'Miso', category: 'fermented', health_factor: 'probiotic' },
-                            { name: 'Tofu', category: 'protein', health_factor: 'lean_protein' },
-                            { name: 'Seaweed', category: 'vegetable', health_factor: 'mineral_rich' }
-                        ],
-                        nutrition: { protein: 8, carbs: 6, fat: 3 },
-                        popularity: 0.9
-                    },
-                    {
-                        name: 'Sashimi',
-                        ingredients: [
-                            { name: 'Salmon', category: 'protein', health_factor: 'omega_3' },
-                            { name: 'Tuna', category: 'protein', health_factor: 'lean_protein' }
-                        ],
-                        nutrition: { protein: 25, carbs: 0, fat: 5 },
-                        popularity: 0.8
-                    }
-                ]
-            },
-            {
-                code: 'IT',
-                name: 'Italy',
-                recipes: [
-                    {
-                        name: 'Mediterranean Salad',
-                        ingredients: [
-                            { name: 'Tomato', category: 'vegetable', health_factor: 'vegetable' },
-                            { name: 'Olive Oil', category: 'fat', health_factor: 'healthy_fat' },
-                            { name: 'Mozzarella', category: 'dairy', health_factor: 'calcium' }
-                        ],
-                        nutrition: { protein: 12, carbs: 10, fat: 15 },
-                        popularity: 0.7
-                    }
-                ]
-            }
-            // Add more countries as needed
-        ];
+function showNotification(title, message, type = 'success') {
+    const notification = document.getElementById('notification');
+    const icon = document.getElementById('notificationIcon');
+    const notificationTitle = document.getElementById('notificationTitle');
+    const notificationMessage = document.getElementById('notificationMessage');
+    
+    notificationTitle.textContent = title;
+    notificationMessage.textContent = message;
+    
+    if (type === 'success') {
+        icon.className = 'fa-solid fa-check-circle text-xl mr-3 text-emerald-500';
+        notification.style.borderLeftColor = '#10b981';
+    } else if (type === 'error') {
+        icon.className = 'fa-solid fa-exclamation-circle text-xl mr-3 text-red-500';
+        notification.style.borderLeftColor = '#ef4444';
+    } else if (type === 'warning') {
+        icon.className = 'fa-solid fa-exclamation-triangle text-xl mr-3 text-yellow-500';
+        notification.style.borderLeftColor = '#f59e0b';
+    } else if (type === 'info') {
+        icon.className = 'fa-solid fa-info-circle text-xl mr-3 text-blue-500';
+        notification.style.borderLeftColor = '#3b82f6';
     }
+    
+    notification.classList.add('show');
+    
+    // Auto hide after 4 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 4000);
+}
 
-    /**
-     * Generate simulated data for demonstration
-     */
-    generateSimulatedData() {
-        const countries = ['Japan', 'Italy', 'Spain', 'Greece', 'Sweden', 'South Korea', 
-                          'France', 'Germany', 'UK', 'USA', 'Mexico', 'Brazil', 'India', 'Thailand'];
+function hideNotification() {
+    document.getElementById('notification').classList.remove('show');
+}
+
+// ====================
+// NAVIGATION
+// ====================
+function goToAdmin() {
+    window.location.href = "/admin";
+}
+
+function logout() {
+    localStorage.removeItem("access_token");
+    window.location.href = "/";
+}
+
+// ====================
+// TAB SYSTEM
+// ====================
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+    });
+    
+    // Show selected tab
+    document.getElementById(`tab${capitalize(tabName)}`).classList.add('active');
+    document.getElementById(`tabContent${capitalize(tabName)}`).classList.remove('hidden');
+    
+    // Load data if needed
+    if (tabName === 'healthMap' && !healthMapData) {
+        loadHealthMap();
+    }
+}
+
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// ====================
+// HEALTH MAP
+// ====================
+async function loadHealthMap() {
+    try {
+        // Show loading
+        document.getElementById('mapStats').innerHTML = `
+            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading health map...
+        `;
         
-        const simulatedData = countries.map(country => {
-            const code = this.getCountryCode(country);
-            const recipeCount = Math.floor(Math.random() * 15) + 5;
-            
-            const recipes = Array.from({ length: recipeCount }, (_, i) => ({
-                name: `${country} Dish ${i + 1}`,
-                ingredients: this.generateRandomIngredients(),
-                nutrition: {
-                    protein: Math.floor(Math.random() * 30) + 10,
-                    carbs: Math.floor(Math.random() * 50) + 20,
-                    fat: Math.floor(Math.random() * 20) + 5
-                },
-                popularity: Math.random() * 0.5 + 0.5 // 0.5 to 1.0
-            }));
-
-            return {
-                code,
-                name: country,
-                recipes,
-                recipeCount
-            };
+        const response = await fetch(`${API_URL}/health-map/`, {
+            headers: { "Authorization": `Bearer ${token}` }
         });
-
-        this.processCountryData(simulatedData);
-        return simulatedData;
-    }
-
-    generateRandomIngredients() {
-        const ingredientTypes = ['vegetable', 'fruit', 'protein', 'grain', 'dairy', 'fat'];
-        const healthFactors = ['vegetable', 'fruit', 'whole_grain', 'lean_protein', 'healthy_fat', 'probiotic'];
         
-        const count = Math.floor(Math.random() * 6) + 3; // 3-8 ingredients
-        return Array.from({ length: count }, (_, i) => ({
-            name: `Ingredient ${i + 1}`,
-            category: ingredientTypes[Math.floor(Math.random() * ingredientTypes.length)],
-            health_factor: healthFactors[Math.floor(Math.random() * healthFactors.length)],
-            is_fresh: Math.random() > 0.3,
-            is_processed: Math.random() > 0.7
-        }));
-    }
-
-    getCountryCode(countryName) {
-        const countryCodes = {
-            'Japan': 'JP', 'Italy': 'IT', 'Spain': 'ES', 'Greece': 'GR',
-            'Sweden': 'SE', 'South Korea': 'KR', 'France': 'FR', 'Germany': 'DE',
-            'UK': 'GB', 'USA': 'US', 'Mexico': 'MX', 'Brazil': 'BR',
-            'India': 'IN', 'Thailand': 'TH'
-        };
-        return countryCodes[countryName] || 'XX';
-    }
-
-    /**
-     * Process data and calculate scores
-     */
-    processCountryData(countriesData) {
-        this.countryData.clear();
+        if (!response.ok) throw new Error("Failed to load health map");
         
-        countriesData.forEach(country => {
-            const score = this.calculator.calculateCountryScore(country.recipes);
-            
-            this.countryData.set(country.code, {
-                ...country,
-                score: score.total,
-                breakdown: score.breakdown,
-                details: {
-                    totalRecipes: score.recipeCount,
-                    bestIngredient: this.findBestIngredient(country.recipes),
-                    commonDish: this.findMostCommonDish(country.recipes)
-                }
-            });
-        });
-    }
-
-    findBestIngredient(recipes) {
-        const ingredientScores = {};
-        recipes.forEach(recipe => {
-            recipe.ingredients.forEach(ing => {
-                if (!ingredientScores[ing.name]) {
-                    ingredientScores[ing.name] = { count: 0, healthScore: 0 };
-                }
-                ingredientScores[ing.name].count++;
-                // Simple scoring: fresh + healthy_factor = higher score
-                let score = 0;
-                if (ing.health_factor) score += 20;
-                if (ing.is_fresh) score += 15;
-                ingredientScores[ing.name].healthScore += score;
-            });
-        });
-
-        let bestIngredient = null;
-        let maxScore = 0;
+        const data = await response.json();
+        healthMapData = data.data;
         
-        for (const [name, data] of Object.entries(ingredientScores)) {
-            const avgScore = data.healthScore / data.count;
-            if (avgScore > maxScore) {
-                maxScore = avgScore;
-                bestIngredient = name;
-            }
+        // Update stats
+        document.getElementById('mapStats').textContent = 
+            `${data.count} countries analyzed | ${Math.max(...data.data.map(d => d.meals_count))} max meals per country`;
+        
+        // Initialize or update map
+        if (!map) {
+            initializeMap();
         }
-
-        return bestIngredient || 'Unknown';
-    }
-
-    findMostCommonDish(recipes) {
-        if (recipes.length === 0) return 'None';
-        // Return the most popular recipe
-        return recipes.reduce((prev, current) => 
-            (prev.popularity || 0) > (current.popularity || 0) ? prev : current
-        ).name;
-    }
-
-    /**
-     * Initialize the map
-     */
-    initMap() {
-        this.map = L.map('healthMap').setView([20, 0], 2);
         
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            opacity: 0.7
-        }).addTo(this.map);
-
-        this.updateMapMarkers();
+        // Update map with data
+        updateMapWithData(data.data);
+        
+        // Update rankings
+        updateCountryRankings(data.data);
+        
+        // Show admin recalc button if needed
+        if (CURRENT_USER.role === 'role_admin') {
+            document.getElementById('recalculateBtn').classList.remove('hidden');
+        }
+        
+        showNotification('Health Map Loaded', `Loaded data for ${data.count} countries`, 'success');
+        
+    } catch (error) {
+        console.error('Error loading health map:', error);
+        showNotification('Error', 'Failed to load health map', 'error');
+        document.getElementById('mapStats').textContent = 'Failed to load data';
     }
+}
 
-    /**
-     * Update map with current data
-     */
-    updateMapMarkers() {
-        if (!this.map) return;
+function initializeMap() {
+    map = L.map('healthMap').setView([20, 0], 2);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 8,
+        minZoom: 2
+    }).addTo(map);
+}
 
-        // Clear existing markers
-        this.map.eachLayer(layer => {
-            if (layer instanceof L.CircleMarker) {
-                this.map.removeLayer(layer);
-            }
+function updateMapWithData(countries) {
+    if (!map) return;
+    
+    // Clear existing markers
+    map.eachLayer(layer => {
+        if (layer instanceof L.CircleMarker) {
+            map.removeLayer(layer);
+        }
+    });
+    
+    // Country coordinates (simplified for demo)
+const countryCoords = {
+  American: [37.0902, -95.7129],
+  British: [55.3781, -3.4360],
+  Canadian: [56.1304, -106.3468],
+  Chinese: [35.8617, 104.1954],
+  Dutch: [52.1326, 5.2913],
+  Egyptian: [26.8206, 30.8025],
+  French: [46.6031, 1.8883],
+  Greek: [39.0742, 21.8243],
+  Indian: [20.5937, 78.9629],
+  Irish: [53.1424, -7.6921],
+  Italian: [41.8719, 12.5674],
+  Jamaican: [18.1096, -77.2975],
+  Japanese: [36.2048, 138.2529],
+  Kenyan: [-0.0236, 37.9062],
+  Malaysian: [4.2105, 101.9758],
+  Mexican: [23.6345, -102.5528],
+  Moroccan: [31.7917, -7.0926],
+  Polish: [51.9194, 19.1451],
+  Portuguese: [39.3999, -8.2245],
+  Russian: [61.5240, 105.3188],
+  Spanish: [40.4637, -3.7492],
+  Thai: [15.8700, 100.9925],
+  Tunisian: [33.8869, 9.5375],
+  Turkish: [38.9637, 35.2433],
+  Vietnamese: [14.0583, 108.2772],
+  Venezulan: [6.4238, -66.5897],
+  Croatian: [45.1000, 15.2000],
+  "Saudi Arabian": [23.8859, 45.0792],
+  Argentinian: [-38.4161, -63.6167],
+  Filipino: [12.8797, 121.7740],
+  Syrian: [34.8021, 38.9968],
+  Venezuelan: [6.4238, -66.5897],
+  Algerian: [28.0339, 1.6596],
+  Australian: [-25.2744, 133.7751],
+  Ukrainian: [48.3794, 31.1656],
+  Norwegian: [60.4720, 8.4689],
+  Uruguayan: [-32.5228, -55.7658],
+  Slovakian: [48.6690, 19.6990],
+
+  Unknown: [0, 0]
+};
+
+    
+    // Color scale for scores (green to red)
+    function getColor(score) {
+        if (score >= 80) return '#10b981';  // Emerald
+        if (score >= 70) return '#34d399';  // Emerald light
+        if (score >= 60) return '#f59e0b';  // Amber
+        if (score >= 50) return '#f97316';  // Orange
+        return '#ef4444';                   // Red
+    }
+    
+    // Add markers for each country
+    countries.forEach(country => {
+        const coords = countryCoords[country.country] || [Math.random() * 60 - 30, Math.random() * 120 - 60];
+        const score = country.avg_nutriscore;
+        
+        const marker = L.circleMarker(coords, {
+            radius: Math.max(10, Math.sqrt(country.meals_count) * 2),
+            fillColor: getColor(score),
+            color: '#ffffff',
+            weight: 2,
+            opacity: 0.8,
+            fillOpacity: 0.7
+        }).addTo(map);
+        
+        // Tooltip
+        marker.bindTooltip(`
+            <div class="font-bold">${country.country}</div>
+            <div>Score: <span class="font-bold">${score}/100</span></div>
+            <div>Meals: ${country.meals_count}</div>
+        `);
+        
+        // Popup on click
+        marker.bindPopup(`
+            <div class="p-2">
+                <h3 class="font-bold text-lg mb-2">${country.country}</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span>Health Score:</span>
+                        <span class="font-bold ${score >= 70 ? 'text-emerald-500' : score >= 50 ? 'text-yellow-500' : 'text-red-500'}">
+                            ${score}/100
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Meals Analyzed:</span>
+                        <span class="font-bold">${country.meals_count}</span>
+                    </div>
+                    <div class="mt-3 text-sm">
+                        ${getHealthMessage(score)}
+                    </div>
+                </div>
+            </div>
+        `);
+    });
+}
+
+function getHealthMessage(score) {
+    if (score >= 80) return "🏆 Excellent health score! Traditional dishes are very healthy.";
+    if (score >= 70) return "👍 Good health score. Generally healthy cuisine.";
+    if (score >= 60) return "⚠️ Moderate health score. Some dishes are healthier than others.";
+    if (score >= 50) return "📊 Average health score. Room for improvement.";
+    return "💡 Lower health score. Consider healthier alternatives.";
+}
+
+function updateCountryRankings(countries) {
+    const container = document.getElementById('countryRankings');
+    
+    // Sort by score (highest first)
+    const sorted = [...countries].sort((a, b) => b.avg_nutriscore - a.avg_nutriscore);
+    
+    container.innerHTML = sorted.slice(0, 10).map((country, index) => {
+        const score = country.avg_nutriscore;
+        let scoreClass = 'score-a';
+        if (score < 80) scoreClass = 'score-b';
+        if (score < 70) scoreClass = 'score-c';
+        if (score < 60) scoreClass = 'score-d';
+        if (score < 50) scoreClass = 'score-e';
+        
+        return `
+        <div class="flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center mr-3">
+                    <span class="font-bold">${index + 1}</span>
+                </div>
+                <div>
+                    <div class="font-medium">${country.country}</div>
+                    <div class="text-xs text-emerald-200/60">${country.meals_count} meals analyzed</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="${scoreClass} nutri-score">${score}/100</span>
+                <div class="mt-1">
+                    <div class="progress-bar w-24">
+                        <div class="progress-fill bg-emerald-500" style="width: ${score}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+async function recalculateMap() {
+    if (CURRENT_USER.role !== 'role_admin') {
+        showNotification('Access Denied', 'Admin privileges required', 'error');
+        return;
+    }
+    
+    try {
+        document.getElementById('recalculateBtn').innerHTML = `
+            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Recalculating...
+        `;
+        document.getElementById('recalculateBtn').disabled = true;
+        
+        const response = await fetch(`${API_URL}/health-map/recalculate`, {
+            method: 'POST',
+            headers: { "Authorization": `Bearer ${token}` }
         });
+        
+        if (!response.ok) throw new Error("Recalculation failed");
+        
+        const data = await response.json();
+        
+        showNotification('Recalculation Complete', `Recalculated ${data.countries} countries`, 'success');
+        
+        // Reload the map
+        setTimeout(() => {
+            loadHealthMap();
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Error recalculating map:', error);
+        showNotification('Error', 'Failed to recalculate health map', 'error');
+    } finally {
+        document.getElementById('recalculateBtn').innerHTML = `
+            <i class="fa-solid fa-calculator mr-2"></i>Recalculate Scores
+        `;
+        document.getElementById('recalculateBtn').disabled = false;
+    }
+}
 
-        // Get country coordinates (simplified)
-        const countryCoords = {
-            'JP': [36.2048, 138.2529], 'IT': [41.8719, 12.5674], 'ES': [40.4637, -3.7492],
-            'GR': [39.0742, 21.8243], 'SE': [60.1282, 18.6435], 'KR': [35.9078, 127.7669],
-            'FR': [46.2276, 2.2137], 'DE': [51.1657, 10.4515], 'GB': [55.3781, -3.4360],
-            'US': [37.0902, -95.7129], 'MX': [23.6345, -102.5528], 'BR': [-14.2350, -51.9253],
-            'IN': [20.5937, 78.9629], 'TH': [15.8700, 100.9925]
-        };
+// ====================
+// MEAL BUILDER
+// ====================
+let ingredientCount = 1;
 
-        this.countryData.forEach((data, code) => {
-            const coords = countryCoords[code] || [Math.random() * 70 - 35, Math.random() * 140 - 70];
+function addIngredientField() {
+    if (ingredientCount >= 5) {
+        showNotification('Limit Reached', 'Maximum 5 ingredients allowed', 'warning');
+        return;
+    }
+    
+    ingredientCount++;
+    const container = document.getElementById('ingredientInputs');
+    
+    const div = document.createElement('div');
+    div.className = 'flex gap-2 mb-3';
+    div.innerHTML = `
+        <input type="text" class="input-field flex-1 px-4 py-3 rounded-lg" 
+               placeholder="Ingredient ${ingredientCount}" 
+               id="ingredient${ingredientCount}">
+        <button onclick="removeIngredientField(this)" class="glass px-4 py-3 rounded-lg hover:bg-red-500/10 text-red-300">
+            <i class="fa-solid fa-minus"></i>
+        </button>
+    `;
+    
+    container.appendChild(div);
+}
+
+function removeIngredientField(button) {
+    if (ingredientCount <= 1) {
+        showNotification('Minimum Required', 'At least 1 ingredient is required', 'warning');
+        return;
+    }
+    
+    button.parentElement.remove();
+    ingredientCount--;
+}
+
+function addPopularIngredient(ingredient) {
+    // Find first empty input or add new one
+    let added = false;
+    for (let i = 1; i <= ingredientCount; i++) {
+        const input = document.getElementById(`ingredient${i}`);
+        if (input && !input.value.trim()) {
+            input.value = ingredient;
+            added = true;
+            break;
+        }
+    }
+    
+    if (!added && ingredientCount < 5) {
+        addIngredientField();
+        setTimeout(() => {
+            const newInput = document.getElementById(`ingredient${ingredientCount}`);
+            if (newInput) newInput.value = ingredient;
+        }, 100);
+    } else if (!added) {
+        showNotification('All fields full', 'Remove an ingredient first', 'warning');
+    }
+}
+
+async function findMealsByIngredients() {
+    // Collect ingredients
+    const ingredients = [];
+    for (let i = 1; i <= ingredientCount; i++) {
+        const input = document.getElementById(`ingredient${i}`);
+        if (input && input.value.trim()) {
+            ingredients.push(input.value.trim());
+        }
+    }
+    
+    if (ingredients.length === 0) {
+        showNotification('No Ingredients', 'Please enter at least one ingredient', 'warning');
+        return;
+    }
+    
+    if (ingredients.length > 5) {
+        showNotification('Too Many Ingredients', 'Maximum 5 ingredients allowed', 'warning');
+        return;
+    }
+    
+    try {
+        // Show loading
+        const resultsContainer = document.getElementById('mealResults');
+        resultsContainer.innerHTML = `
+            <div class="text-center py-12">
+                <i class="fa-solid fa-spinner fa-spin text-4xl text-emerald-400 mb-4"></i>
+                <p>Finding healthy meals with: ${ingredients.join(', ')}</p>
+            </div>
+        `;
+        
+        console.log('Sending ingredients as array:', ingredients);
+        
+        // ¡IMPORTANTE! Enviar como array simple, no como objeto
+        const response = await fetch(`${API_URL}/meal-builder`, {
+            method: 'POST',
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(ingredients)  // ¡Solo el array!
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Error response:', errorData);
             
-            // Determine color based on score
-            let color;
-            if (data.score >= 70) color = '#10b981';
-            else if (data.score >= 40) color = '#f59e0b';
-            else color = '#ef4444';
-
-            const marker = L.circleMarker(coords, {
-                radius: 10 + (data.score / 10),
-                fillColor: color,
-                color: '#ffffff',
-                weight: 2,
-                opacity: 0.8,
-                fillOpacity: 0.7
-            }).addTo(this.map);
-
-            marker.bindPopup(`
-                <div style="color: #1f2937; min-width: 200px;">
-                    <strong>${data.name}</strong><br>
-                    Health Score: <b>${data.score}/100</b><br>
-                    Recipes Analyzed: ${data.recipes.length}<br>
-                    <hr>
-                    Nutrition: ${data.breakdown?.nutrition || 0}<br>
-                    Balance: ${data.breakdown?.balance || 0}<br>
-                    Variety: ${data.breakdown?.variety || 0}<br>
-                    Freshness: ${data.breakdown?.freshness || 0}
-                </div>
-            `);
-
-            marker.on('click', () => {
-                this.selectCountry(data);
-            });
-        });
-    }
-
-    /**
-     * Select a country and show details
-     */
-    selectCountry(countryData) {
-        this.selectedCountry = countryData;
-        this.updateCountryDetails();
-        this.updateChart();
-    }
-
-    updateCountryDetails() {
-        if (!this.selectedCountry) return;
-
-        const detailsDiv = document.getElementById('countryDetails');
-        detailsDiv.innerHTML = `
-            <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-2xl font-bold">${this.selectedCountry.name}</h3>
-                    <span class="text-4xl font-bold gradient-text">${this.selectedCountry.score}/100</span>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="glass p-4 rounded-xl">
-                        <p class="text-sm text-emerald-200/70">Recipes Analyzed</p>
-                        <p class="text-xl font-bold">${this.selectedCountry.recipes.length}</p>
-                    </div>
-                    <div class="glass p-4 rounded-xl">
-                        <p class="text-sm text-emerald-200/70">Best Ingredient</p>
-                        <p class="text-xl font-bold">${this.selectedCountry.details.bestIngredient}</p>
-                    </div>
-                </div>
-
-                <div>
-                    <h4 class="font-bold mb-2">Score Breakdown</h4>
-                    <div class="space-y-2">
-                        ${Object.entries(this.selectedCountry.breakdown || {}).map(([key, value]) => `
-                            <div class="flex items-center justify-between">
-                                <span class="capitalize">${key}</span>
-                                <div class="flex items-center w-2/3">
-                                    <div class="flex-1 bg-gray-700 rounded-full h-2 mr-2">
-                                        <div class="bg-emerald-500 h-2 rounded-full" style="width: ${value}%"></div>
-                                    </div>
-                                    <span>${value}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <div>
-                    <h4 class="font-bold mb-2">Sample Recipes</h4>
-                    <div class="space-y-2 max-h-40 overflow-y-auto">
-                        ${this.selectedCountry.recipes.slice(0, 3).map(recipe => `
-                            <div class="glass p-3 rounded-lg">
-                                <p class="font-semibold">${recipe.name}</p>
-                                <p class="text-sm text-emerald-200/70">${recipe.ingredients.length} ingredients</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
+            // Mostrar detalles específicos del error 422
+            if (response.status === 422) {
+                if (Array.isArray(errorData.detail)) {
+                    const errorMessages = errorData.detail.map(err => {
+                        return `${err.loc ? err.loc.join('.') + ': ' : ''}${err.msg || err}`;
+                    }).join('; ');
+                    throw new Error(`Validation error: ${errorMessages}`);
+                } else if (errorData.detail) {
+                    throw new Error(`Validation: ${errorData.detail}`);
+                }
+            }
+            throw new Error(errorData.detail || `Server error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        // Update count
+        document.getElementById('mealsFoundCount').textContent = 
+            `${data.count} ${data.count === 1 ? 'meal' : 'meals'} found`;
+        
+        // Display results
+        if (data.results && Array.isArray(data.results)) {
+            displayMealResults(data.results);
+            showNotification('Meals Found', `Found ${data.count} healthy meals`, 'success');
+        } else {
+            console.error('Invalid data format:', data);
+            showNotification('Error', 'Invalid response format from server', 'error');
+            displayMealResults([]);
+        }
+        
+    } catch (error) {
+        console.error('Error finding meals:', error);
+        showNotification('Error', error.message, 'error');
+        
+        document.getElementById('mealResults').innerHTML = `
+            <div class="text-center py-12 text-red-400">
+                <i class="fa-solid fa-exclamation-triangle text-4xl mb-4"></i>
+                <p>${error.message}</p>
+                <p class="text-sm mt-2">Try different ingredients or check console for details</p>
             </div>
         `;
     }
+}
 
-    updateChart() {
-        if (!this.selectedCountry) return;
-
-        const ctx = document.getElementById('scoreChart').getContext('2d');
-        
-        // Destroy existing chart if exists
-        if (window.scoreChartInstance) {
-            window.scoreChartInstance.destroy();
-        }
-
-        const labels = Object.keys(this.selectedCountry.breakdown || {});
-        const data = Object.values(this.selectedCountry.breakdown || {});
-
-        window.scoreChartInstance = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
-                datasets: [{
-                    data: data,
-                    backgroundColor: [
-                        'rgba(16, 185, 129, 0.8)',
-                        'rgba(59, 130, 246, 0.8)',
-                        'rgba(245, 158, 11, 0.8)',
-                        'rgba(139, 92, 246, 0.8)'
-                    ],
-                    borderWidth: 2,
-                    borderColor: 'rgba(255, 255, 255, 0.1)'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
-        });
+function displayMealResults(meals) {
+    const container = document.getElementById('mealResults');
+    
+    if (meals.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12 text-emerald-200/50">
+                <i class="fa-solid fa-utensils text-4xl mb-4"></i>
+                <p>No meals found with those ingredients</p>
+                <p class="text-sm mt-2">Try different or more specific ingredients</p>
+            </div>
+        `;
+        return;
     }
-
-    /**
-     * Update UI with current data
-     */
-    updateUI() {
-        const countries = Array.from(this.countryData.values());
+    
+    container.innerHTML = meals.map(meal => {
+        // Cambiar de meal.nutriscore a meal.nutrition_score
+        const score = meal.nutrition_score;  // ¡CAMBIO AQUÍ!
+        let scoreClass = 'score-a';
+        if (score < 80) scoreClass = 'score-b';
+        if (score < 70) scoreClass = 'score-c';
+        if (score < 60) scoreClass = 'score-d';
+        if (score < 50) scoreClass = 'score-e';
         
-        // Update counters
-        document.getElementById('countriesCount').textContent = countries.length;
-        document.getElementById('recipesCount').textContent = countries.reduce((sum, c) => sum + c.recipes.length, 0);
-        
-        // Find top country
-        if (countries.length > 0) {
-            const topCountry = countries.reduce((prev, current) => 
-                prev.score > current.score ? prev : current
-            );
-            document.getElementById('topCountry').textContent = topCountry.name;
-            document.getElementById('avgScore').textContent = Math.round(
-                countries.reduce((sum, c) => sum + c.score, 0) / countries.length
-            );
-        }
-
-        // Update ranking list
-        const sortedCountries = [...countries].sort((a, b) => b.score - a.score);
-        const rankingList = document.getElementById('rankingList');
-        
-        rankingList.innerHTML = sortedCountries.slice(0, 10).map((country, index) => `
-            <div class="flex items-center justify-between glass p-3 rounded-lg hover:bg-emerald-500/10 transition cursor-pointer" 
-                 onclick="healthMapManager.selectCountry(${JSON.stringify(country).replace(/"/g, '&quot;')})">
-                <div class="flex items-center">
-                    <span class="w-6 h-6 flex items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold mr-3">
-                        ${index + 1}
-                    </span>
-                    <span class="font-medium">${country.name}</span>
-                </div>
-                <div class="flex items-center">
-                    <div class="w-16 bg-gray-700 rounded-full h-2 mr-2">
-                        <div class="bg-emerald-500 h-2 rounded-full" style="width: ${country.score}%"></div>
-                    </div>
-                    <span class="font-bold">${country.score}</span>
+        return `
+        <div class="glass rounded-xl p-4 flex items-start gap-4 card-hover">
+            <div class="flex-shrink-0">
+                <div class="w-24 h-24 rounded-lg overflow-hidden bg-emerald-900/50">
+                    ${meal.image ? `
+                        <img src="${meal.image}" alt="${meal.name}" 
+                             class="w-full h-full object-cover">
+                    ` : `
+                        <div class="w-full h-full flex items-center justify-center">
+                            <i class="fa-solid fa-utensils text-3xl text-emerald-200/50"></i>
+                        </div>
+                    `}
                 </div>
             </div>
-        `).join('');
-    }
+            <div class="flex-1">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h4 class="font-bold text-lg">${meal.name}</h4>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="glass px-2 py-1 rounded text-xs">
+                                <i class="fa-solid fa-flag mr-1"></i>${meal.country}
+                            </span>
+                            <span class="glass px-2 py-1 rounded text-xs">
+                                <i class="fa-solid fa-hashtag mr-1"></i>ID: ${meal.meal_id}
+                            </span>
+                            <span class="glass px-2 py-1 rounded text-xs">
+                                <i class="fa-solid fa-fire mr-1"></i>${meal.calories || 0} kcal
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="${scoreClass} nutri-score mb-2">${score}/100</div>
+                        <button onclick="viewMealDetails(${meal.meal_id})" 
+                                class="glass px-3 py-1 rounded text-sm hover:bg-emerald-500/20 transition">
+                            <i class="fa-solid fa-eye mr-1"></i>View Details
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Match percentage -->
+                <div class="mt-2 mb-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm text-emerald-200/70">Ingredient Match</span>
+                        <span class="text-sm font-medium">${meal.match_percentage}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-blue-500" style="width: ${meal.match_percentage}%"></div>
+                    </div>
+                </div>
+                
+                <!-- Health Score -->
+                <div class="mt-4">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm text-emerald-200/70">Health Score</span>
+                        <span class="text-sm font-medium">${score}/100</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-emerald-500" style="width: ${score}%"></div>
+                    </div>
+                </div>
+                
+                <!-- Matched ingredients -->
+                <div class="mt-3">
+                    <p class="text-xs text-emerald-200/70 mb-1">Matched ingredients:</p>
+                    <div class="flex flex-wrap gap-1">
+                        ${meal.matched_ingredients.map(ing => `
+                            <span class="px-2 py-1 bg-emerald-500/20 rounded text-xs">${ing}</span>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+function viewMealDetails(mealId) {
+    showNotification('Feature Coming Soon', 'Meal details view will be added soon!', 'info');
+    // You can implement this to show detailed nutritional breakdown
 }
 
 // ====================
-// GLOBAL INSTANCE & INIT
+// INGREDIENT COMPARISON
 // ====================
-const healthMapManager = new HealthMapManager();
+function setMealIds(id1, id2) {
+    document.getElementById('meal1Id').value = id1;
+    document.getElementById('meal2Id').value = id2;
+}
 
-function loadSimulatedData() {
-    healthMapManager.generateSimulatedData();
-    healthMapManager.updateMapMarkers();
-    healthMapManager.updateUI();
+async function compareMeals() {
+    const meal1Id = document.getElementById('meal1Id').value;
+    const meal2Id = document.getElementById('meal2Id').value;
     
-    // Auto-select top country
-    const countries = Array.from(healthMapManager.countryData.values());
-    if (countries.length > 0) {
-        const topCountry = countries.reduce((prev, current) => 
-            prev.score > current.score ? prev : current
+    if (!meal1Id || !meal2Id) {
+        showNotification('Missing IDs', 'Please enter both meal IDs', 'warning');
+        return;
+    }
+    
+    if (meal1Id === meal2Id) {
+        showNotification('Same Meal', 'Please enter two different meal IDs', 'warning');
+        return;
+    }
+    
+    try {
+        // Show loading
+        const resultsContainer = document.getElementById('comparisonResults');
+        resultsContainer.innerHTML = `
+            <div class="text-center py-12">
+                <i class="fa-solid fa-spinner fa-spin text-4xl text-emerald-400 mb-4"></i>
+                <p>Comparing meals ${meal1Id} and ${meal2Id}...</p>
+            </div>
+        `;
+        
+        const response = await fetch(
+            `${API_URL}/versus/compare?meal1_id=${meal1Id}&meal2_id=${meal2Id}`,
+            {
+                headers: { "Authorization": `Bearer ${token}` }
+            }
         );
-        healthMapManager.selectCountry(topCountry);
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to compare meals');
+        }
+        
+        const data = await response.json();
+        
+        // Display comparison results
+        displayComparisonResults(data);
+        
+    } catch (error) {
+        console.error('Error comparing meals:', error);
+        showNotification('Error', error.message, 'error');
+        
+        document.getElementById('comparisonResults').innerHTML = `
+            <div class="text-center py-12 text-red-400">
+                <i class="fa-solid fa-exclamation-triangle text-4xl mb-4"></i>
+                <p>${error.message}</p>
+            </div>
+        `;
     }
 }
 
-function loadRealData() {
-    // Placeholder for real API call
-    alert('This would connect to your backend API\nPOST /api/health-map/calculate\nwith country recipe data from MongoDB');
+function displayComparisonResults(data) {
+    const container = document.getElementById('comparisonResults');
+    const winnerEl = document.getElementById('comparisonWinner');
     
-    // For now, load simulated data but label it as "real"
-    loadSimulatedData();
+    // Update winner banner
+    winnerEl.textContent = `Winner: ${data.winner}`;
+    winnerEl.classList.remove('hidden');
+    
+    // Determine which meal won
+    const meal1Won = data.winner === data.meal_1.name;
+    const meal2Won = data.winner === data.meal_2.name;
+    
+    container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Meal 1 -->
+            <div class="glass rounded-xl p-4 ${meal1Won ? 'ring-2 ring-emerald-500' : ''}">
+                <div class="flex justify-between items-start mb-4">
+                    <h5 class="font-bold text-lg">${data.meal_1.name}</h5>
+                    ${meal1Won ? `
+                        <span class="px-2 py-1 bg-emerald-500/20 text-emerald-300 rounded text-xs">
+                            <i class="fa-solid fa-trophy mr-1"></i>Winner
+                        </span>
+                    ` : ''}
+                </div>
+                
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-16 h-16 rounded-lg overflow-hidden bg-emerald-900/50 flex-shrink-0">
+                        ${data.meal_1.image ? `
+                            <img src="${data.meal_1.image}" alt="${data.meal_1.name}" 
+                                 class="w-full h-full object-cover">
+                        ` : `
+                            <div class="w-full h-full flex items-center justify-center">
+                                <i class="fa-solid fa-utensils text-xl text-emerald-200/50"></i>
+                            </div>
+                        `}
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-emerald-200/70">Country:</span>
+                            <span class="font-medium">${data.meal_1.country}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-emerald-200/70">Ingredients Used:</span>
+                            <span class="font-medium">${data.meal_1.ingredients_used}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Health Score -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium">Health Score</span>
+                        <span class="text-xl font-bold ${getScoreColorClass(data.meal_1.nutriscore)}">
+                            ${data.meal_1.nutriscore}/100
+                        </span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill ${getScoreColor(data.meal_1.nutriscore)}" 
+                             style="width: ${data.meal_1.nutriscore}%"></div>
+                    </div>
+                </div>
+                
+                <!-- Nutrients -->
+                <div class="space-y-2">
+                    <h6 class="font-medium text-sm mb-2">Nutrients per serving:</h6>
+                    ${Object.entries(data.meal_1.nutrients).map(([key, value]) => `
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-emerald-200/70 capitalize">${key.replace('_', ' ')}:</span>
+                            <span class="font-medium">${value}g</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <!-- Meal 2 -->
+            <div class="glass rounded-xl p-4 ${meal2Won ? 'ring-2 ring-emerald-500' : ''}">
+                <div class="flex justify-between items-start mb-4">
+                    <h5 class="font-bold text-lg">${data.meal_2.name}</h5>
+                    ${meal2Won ? `
+                        <span class="px-2 py-1 bg-emerald-500/20 text-emerald-300 rounded text-xs">
+                            <i class="fa-solid fa-trophy mr-1"></i>Winner
+                        </span>
+                    ` : ''}
+                </div>
+                
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-16 h-16 rounded-lg overflow-hidden bg-emerald-900/50 flex-shrink-0">
+                        ${data.meal_2.image ? `
+                            <img src="${data.meal_2.image}" alt="${data.meal_2.name}" 
+                                 class="w-full h-full object-cover">
+                        ` : `
+                            <div class="w-full h-full flex items-center justify-center">
+                                <i class="fa-solid fa-utensils text-xl text-emerald-200/50"></i>
+                            </div>
+                        `}
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-emerald-200/70">Country:</span>
+                            <span class="font-medium">${data.meal_2.country}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-emerald-200/70">Ingredients Used:</span>
+                            <span class="font-medium">${data.meal_2.ingredients_used}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Health Score -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium">Health Score</span>
+                        <span class="text-xl font-bold ${getScoreColorClass(data.meal_2.nutriscore)}">
+                            ${data.meal_2.nutriscore}/100
+                        </span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill ${getScoreColor(data.meal_2.nutriscore)}" 
+                             style="width: ${data.meal_2.nutriscore}%"></div>
+                    </div>
+                </div>
+                
+                <!-- Nutrients -->
+                <div class="space-y-2">
+                    <h6 class="font-medium text-sm mb-2">Nutrients per serving:</h6>
+                    ${Object.entries(data.meal_2.nutrients).map(([key, value]) => `
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-emerald-200/70 capitalize">${key.replace('_', ' ')}:</span>
+                            <span class="font-medium">${value}g</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Comparison Summary -->
+        <div class="glass rounded-xl p-4 mt-6">
+            <h6 class="font-bold mb-3 text-center">Comparison Summary</h6>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold ${data.meal_1.nutriscore > data.meal_2.nutriscore ? 'text-emerald-400' : 'text-red-400'}">
+                        ${data.meal_1.nutriscore}
+                    </div>
+                    <div class="text-sm text-emerald-200/70">${data.meal_1.name} Score</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold ${data.meal_2.nutriscore > data.meal_1.nutriscore ? 'text-emerald-400' : 'text-red-400'}">
+                        ${data.meal_2.nutriscore}
+                    </div>
+                    <div class="text-sm text-emerald-200/70">${data.meal_2.name} Score</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold">
+                        ${Math.abs(data.meal_1.nutriscore - data.meal_2.nutriscore).toFixed(1)}
+                    </div>
+                    <div class="text-sm text-emerald-200/70">Point Difference</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-emerald-400">
+                        ${data.winner}
+                    </div>
+                    <div class="text-sm text-emerald-200/70">Healthier Choice</div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    healthMapManager.initMap();
+function getScoreColor(score) {
+    if (score >= 80) return 'bg-emerald-500';
+    if (score >= 70) return 'bg-emerald-400';
+    if (score >= 60) return 'bg-yellow-500';
+    if (score >= 50) return 'bg-orange-500';
+    return 'bg-red-500';
+}
+
+function getScoreColorClass(score) {
+    if (score >= 80) return 'text-emerald-500';
+    if (score >= 70) return 'text-emerald-400';
+    if (score >= 60) return 'text-yellow-500';
+    if (score >= 50) return 'text-orange-500';
+    return 'text-red-500';
+}
+
+// ====================
+// NUTRIENT FILTERS
+// ====================
+// Initialize range sliders
+document.addEventListener('DOMContentLoaded', function() {
+    // Calories
+    const caloriesRange = document.getElementById('caloriesRange');
+    const caloriesValue = document.getElementById('caloriesValue');
+    caloriesRange.addEventListener('input', function() {
+        caloriesValue.textContent = this.value + ' kcal';
+    });
     
-    // Load initial simulated data
-    setTimeout(() => {
-        loadSimulatedData();
-    }, 500);
+    // Protein
+    const proteinRange = document.getElementById('proteinRange');
+    const proteinValue = document.getElementById('proteinValue');
+    proteinRange.addEventListener('input', function() {
+        proteinValue.textContent = this.value + 'g';
+    });
+    
+    // Fat
+    const fatRange = document.getElementById('fatRange');
+    const fatValue = document.getElementById('fatValue');
+    fatRange.addEventListener('input', function() {
+        fatValue.textContent = this.value + 'g';
+    });
+    
+    // Carbs
+    const carbsRange = document.getElementById('carbsRange');
+    const carbsValue = document.getElementById('carbsValue');
+    carbsRange.addEventListener('input', function() {
+        carbsValue.textContent = this.value + 'g';
+    });
+});
+
+async function filterMealsByNutrients() {
+    const maxCalories = document.getElementById('caloriesRange').value;
+    const minProtein = document.getElementById('proteinRange').value;
+    const maxFat = document.getElementById('fatRange').value;
+    const maxCarbs = document.getElementById('carbsRange').value;
+    
+    // Build query string
+    const params = new URLSearchParams();
+    if (maxCalories !== '2000') params.append('max_calories', maxCalories);
+    if (minProtein !== '0') params.append('min_protein', minProtein);
+    if (maxFat !== '100') params.append('max_fat', maxFat);
+    if (maxCarbs !== '200') params.append('max_carbs', maxCarbs);
+    
+    try {
+        // Show loading
+        const container = document.getElementById('filteredMeals');
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <i class="fa-solid fa-spinner fa-spin text-4xl text-emerald-400 mb-4"></i>
+                <p>Finding meals matching your criteria...</p>
+            </div>
+        `;
+        
+        const response = await fetch(
+            `${API_URL}/filters/meals?${params.toString()}`,
+            {
+                headers: { "Authorization": `Bearer ${token}` }
+            }
+        );
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to filter meals');
+        }
+        
+        const data = await response.json();
+        
+        // Update stats
+        document.getElementById('filterStats').textContent = 
+            `${data.matches} ${data.matches === 1 ? 'meal' : 'meals'} match your criteria`;
+        
+        // Display results
+        displayFilteredMeals(data.meals, data.filters);
+        
+        showNotification('Filters Applied', `Found ${data.matches} matching meals`, 'success');
+        
+    } catch (error) {
+        console.error('Error filtering meals:', error);
+        showNotification('Error', error.message, 'error');
+        
+        document.getElementById('filteredMeals').innerHTML = `
+            <div class="text-center py-12 text-red-400">
+                <i class="fa-solid fa-exclamation-triangle text-4xl mb-4"></i>
+                <p>${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+function displayFilteredMeals(meals, filters) {
+    const container = document.getElementById('filteredMeals');
+    
+    if (meals.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12 text-emerald-200/50">
+                <i class="fa-solid fa-filter-circle-xmark text-4xl mb-4"></i>
+                <p>No meals match your current filters</p>
+                <p class="text-sm mt-2">Try adjusting your criteria</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Show active filters
+    let activeFilters = [];
+    if (filters.max_calories) activeFilters.push(`Max ${filters.max_calories} kcal`);
+    if (filters.min_protein) activeFilters.push(`Min ${filters.min_protein}g protein`);
+    if (filters.max_fat) activeFilters.push(`Max ${filters.max_fat}g fat`);
+    if (filters.max_carbs) activeFilters.push(`Max ${filters.max_carbs}g carbs`);
+    
+    container.innerHTML = `
+        <div class="mb-6">
+            <div class="flex flex-wrap gap-2">
+                ${activeFilters.map(filter => `
+                    <span class="glass px-3 py-1.5 rounded-lg text-sm flex items-center">
+                        <i class="fa-solid fa-filter mr-2 text-emerald-300"></i>${filter}
+                    </span>
+                `).join('')}
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${meals.map(meal => `
+                <div class="glass rounded-xl p-4 card-hover">
+                    <div class="flex items-start gap-3">
+                        <div class="w-20 h-20 rounded-lg overflow-hidden bg-emerald-900/50 flex-shrink-0">
+                            ${meal.image ? `
+                                <img src="${meal.image}" alt="${meal.name}" 
+                                     class="w-full h-full object-cover">
+                            ` : `
+                                <div class="w-full h-full flex items-center justify-center">
+                                    <i class="fa-solid fa-utensils text-xl text-emerald-200/50"></i>
+                                </div>
+                            `}
+                        </div>
+                        <div class="flex-1">
+                            <h5 class="font-bold">${meal.name}</h5>
+                            <div class="flex items-center gap-2 mt-1 mb-3">
+                                <span class="text-xs glass px-2 py-1 rounded">
+                                    <i class="fa-solid fa-flag mr-1"></i>${meal.country}
+                                </span>
+                                <span class="text-xs glass px-2 py-1 rounded">
+                                    <i class="fa-solid fa-hashtag mr-1"></i>ID: ${meal.mealID}
+                                </span>
+                            </div>
+                            
+                            <!-- Nutrients -->
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-emerald-200/70">Calories:</span>
+                                    <span class="font-medium">${meal.nutrients.energy_kcal}kcal</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-emerald-200/70">Protein:</span>
+                                    <span class="font-medium">${meal.nutrients.proteins}g</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-emerald-200/70">Fat:</span>
+                                    <span class="font-medium">${meal.nutrients.fat}g</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-emerald-200/70">Carbs:</span>
+                                    <span class="font-medium">${meal.nutrients.carbohydrates}g</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function resetFilters() {
+    document.getElementById('caloriesRange').value = 2000;
+    document.getElementById('caloriesValue').textContent = '2000 kcal';
+    
+    document.getElementById('proteinRange').value = 0;
+    document.getElementById('proteinValue').textContent = '0g';
+    
+    document.getElementById('fatRange').value = 100;
+    document.getElementById('fatValue').textContent = '100g';
+    
+    document.getElementById('carbsRange').value = 200;
+    document.getElementById('carbsValue').textContent = '200g';
+    
+    document.getElementById('filteredMeals').innerHTML = `
+        <div class="text-center py-12 text-emerald-200/50">
+            <i class="fa-solid fa-filter-circle-xmark text-4xl mb-4"></i>
+            <p>Apply filters to find matching meals</p>
+        </div>
+    `;
+    
+    document.getElementById('filterStats').textContent = '0 meals match your criteria';
+    
+    showNotification('Filters Reset', 'All filters have been reset', 'info');
+}
+
+function setLowCarbPreset() {
+    document.getElementById('caloriesRange').value = 1800;
+    document.getElementById('caloriesValue').textContent = '1800 kcal';
+    
+    document.getElementById('proteinRange').value = 60;
+    document.getElementById('proteinValue').textContent = '60g';
+    
+    document.getElementById('fatRange').value = 80;
+    document.getElementById('fatValue').textContent = '80g';
+    
+    document.getElementById('carbsRange').value = 50;
+    document.getElementById('carbsValue').textContent = '50g';
+    
+    showNotification('Preset Applied', 'Low Carb diet preset applied', 'info');
+}
+
+function setHighProteinPreset() {
+    document.getElementById('caloriesRange').value = 2000;
+    document.getElementById('caloriesValue').textContent = '2000 kcal';
+    
+    document.getElementById('proteinRange').value = 80;
+    document.getElementById('proteinValue').textContent = '80g';
+    
+    document.getElementById('fatRange').value = 70;
+    document.getElementById('fatValue').textContent = '70g';
+    
+    document.getElementById('carbsRange').value = 150;
+    document.getElementById('carbsValue').textContent = '150g';
+    
+    showNotification('Preset Applied', 'High Protein diet preset applied', 'info');
+}
+
+function setLowFatPreset() {
+    document.getElementById('caloriesRange').value = 1600;
+    document.getElementById('caloriesValue').textContent = '1600 kcal';
+    
+    document.getElementById('proteinRange').value = 50;
+    document.getElementById('proteinValue').textContent = '50g';
+    
+    document.getElementById('fatRange').value = 30;
+    document.getElementById('fatValue').textContent = '30g';
+    
+    document.getElementById('carbsRange').value = 200;
+    document.getElementById('carbsValue').textContent = '200g';
+    
+    showNotification('Preset Applied', 'Low Fat diet preset applied', 'info');
+}
+
+function setLowCaloriePreset() {
+    document.getElementById('caloriesRange').value = 1200;
+    document.getElementById('caloriesValue').textContent = '1200 kcal';
+    
+    document.getElementById('proteinRange').value = 40;
+    document.getElementById('proteinValue').textContent = '40g';
+    
+    document.getElementById('fatRange').value = 40;
+    document.getElementById('fatValue').textContent = '40g';
+    
+    document.getElementById('carbsRange').value = 100;
+    document.getElementById('carbsValue').textContent = '100g';
+    
+    showNotification('Preset Applied', 'Low Calorie diet preset applied', 'info');
+}
+
+
+// ====================
+// UTILITY FUNCTIONS
+// ====================
+function getUserStats() {
+    showNotification('Stats Coming Soon', 'User statistics dashboard will be added soon!', 'info');
+}
+
+function showFeatureInfo() {
+    showNotification('How It Works', 'Explore 4 features: Health Map, Meal Builder, Comparison, and Nutrient Filters', 'info');
+}
+
+// ====================
+// INITIALIZATION
+// ====================
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializeUser();
 });
 </script>
 </body>
