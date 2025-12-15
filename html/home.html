@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root {
     --primary: #10b981;
@@ -509,7 +510,7 @@ body {
                             <div class="grid grid-cols-2 gap-2">
                                 <div class="glass px-3 py-2 rounded-lg cursor-pointer hover:bg-emerald-500/10 transition" 
                                      onclick="setMealIds(52772, 53151)">
-                                    <div class="font-medium text-sm">52772 vs 52768</div>
+                                    <div class="font-medium text-sm">52772 vs 53151</div>
                                     <div class="text-xs text-emerald-200/60">Teriyaki Chicken Casserole vs Paella</div>
                                 </div>
                                 <div class="glass px-3 py-2 rounded-lg cursor-pointer hover:bg-emerald-500/10 transition" 
@@ -1259,13 +1260,15 @@ function displayMealResults(meals) {
                             </span>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <div class="${scoreClass} nutri-score mb-2">${score}/100</div>
-                        <button onclick="viewMealDetails(${meal.meal_id})" 
-                                class="glass px-3 py-1 rounded text-sm hover:bg-emerald-500/20 transition">
-                            <i class="fa-solid fa-eye mr-1"></i>View Details
-                        </button>
-                    </div>
+                        <div class="text-right">
+                            <div class="${scoreClass} nutri-score mb-2">${score}/100</div>
+                            <div class="flex gap-1">
+                                <button onclick="addMealToMyDayFromCard(${meal.meal_id}, '${meal.name.replace(/'/g, "\\'")}')" 
+                                        class="glass px-3 py-1 rounded text-sm hover:bg-purple-500/20 transition">
+                                    <i class="fa-solid fa-plus mr-1"></i>Add for my today meal
+                                </button>
+                            </div>
+                        </div>
                 </div>
                 
                 <!-- Match percentage -->
@@ -1303,11 +1306,6 @@ function displayMealResults(meals) {
         </div>
         `;
     }).join('');
-}
-
-function viewMealDetails(mealId) {
-    showNotification('Feature Coming Soon', 'Meal details view will be added soon!', 'info');
-    // You can implement this to show detailed nutritional breakdown
 }
 
 // ====================
@@ -1822,13 +1820,755 @@ function setLowCaloriePreset() {
     showNotification('Preset Applied', 'Low Calorie diet preset applied', 'info');
 }
 
+// ====================
+// MY STATS & MEAL TRACKING
+// ====================
+let statsModal = null;
+let nutritionChart = null;
+
+async function getUserStats() {
+    showUserStatsModal();
+}
+
+function showUserStatsModal() {
+    // Create model of statisticks
+    const modalHTML = `
+        <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div class="glass-strong rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
+                <!-- Header -->
+                <div class="p-6 border-b border-white/10">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-2xl font-bold">My Nutrition Stats</h3>
+                            <p class="text-emerald-200/70">Track your daily meals and health progress</p>
+                        </div>
+                        <button onclick="closeStatsModal()" class="glass p-2 rounded-lg hover:bg-red-500/10">
+                            <i class="fa-solid fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Content -->
+                <div class="p-6 overflow-y-auto max-h-[70vh]">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                        <!-- Quick Stats -->
+                        <div class="glass rounded-xl p-4">
+                            <h4 class="font-bold mb-3 flex items-center">
+                                <i class="fa-solid fa-fire mr-2 text-orange-400"></i>
+                                Today's Summary
+                            </h4>
+                            <div id="todaySummary" class="space-y-3">
+                                <div class="text-center py-8">
+                                    <i class="fa-solid fa-spinner fa-spin text-2xl text-emerald-400 mb-3"></i>
+                                    <p>Loading today's stats...</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Log New Meal -->
+                        <div class="glass rounded-xl p-4">
+                            <h4 class="font-bold mb-3 flex items-center">
+                                <i class="fa-solid fa-utensils mr-2 text-emerald-400"></i>
+                                Log New Meal
+                            </h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm text-emerald-200/80 mb-2">Meal ID</label>
+                                    <input type="number" id="logMealId" 
+                                           class="input-field w-full px-4 py-2 rounded-lg"
+                                           placeholder="Enter meal ID from results">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-emerald-200/80 mb-2">Meal Name</label>
+                                    <input type="text" id="logMealName" 
+                                           class="input-field w-full px-4 py-2 rounded-lg"
+                                           placeholder="Meal name (optional)">
+                                </div>
+                                <button onclick="logMealToMyDay()" class="btn-primary w-full py-2 rounded-lg">
+                                    <i class="fa-solid fa-plus mr-2"></i>Log This Meal
+                                </button>
+                                <div class="text-xs text-emerald-200/50 mt-2">
+                                    <i class="fa-solid fa-lightbulb mr-1"></i>
+                                    Find meal IDs in the Meal Builder tab
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Weekly Summary -->
+                        <div class="glass rounded-xl p-4">
+                            <h4 class="font-bold mb-3 flex items-center">
+                                <i class="fa-solid fa-calendar-week mr-2 text-blue-400"></i>
+                                Overall Stats
+                            </h4>
+                            <div id="overallSummary" class="space-y-3">
+                                <div class="text-center py-8">
+                                    <i class="fa-solid fa-spinner fa-spin text-2xl text-emerald-400 mb-3"></i>
+                                    <p>Loading your stats...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Charts Section -->
+                    <div class="glass rounded-xl p-4 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="font-bold flex items-center">
+                                <i class="fa-solid fa-chart-line mr-2 text-purple-400"></i>
+                                Your Health Score Trend
+                            </h4>
+                            <div class="flex gap-2">
+                                <button onclick="loadMyStatsChart('nutriscore')" class="glass px-3 py-1 rounded text-sm active">
+                                    <i class="fa-solid fa-heart-pulse mr-1"></i>Score
+                                </button>
+                                <button onclick="loadMyStatsChart('distribution')" class="glass px-3 py-1 rounded text-sm">
+                                    <i class="fa-solid fa-chart-pie mr-1"></i>Distribution
+                                </button>
+                            </div>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="myStatsChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- My Meals List -->
+                    <div class="glass rounded-xl p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="font-bold flex items-center">
+                                <i class="fa-solid fa-history mr-2 text-yellow-400"></i>
+                                My Logged Meals
+                            </h4>
+                            <div class="flex gap-2">
+                                <button onclick="clearAllMeals()" class="glass px-3 py-1 rounded text-sm bg-red-500/20 hover:bg-red-500/30 text-red-300">
+                                    <i class="fa-solid fa-trash mr-1"></i>Clear All
+                                </button>
+                            </div>
+                        </div>
+                        <div id="myMealsList" class="space-y-3">
+                            <div class="text-center py-8">
+                                <i class="fa-solid fa-spinner fa-spin text-2xl text-emerald-400 mb-3"></i>
+                                <p>Loading your meals...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    closeStatsModal();
+    
+    statsModal = document.createElement('div');
+    statsModal.id = 'statsModal';
+    statsModal.innerHTML = modalHTML;
+    document.body.appendChild(statsModal);
+    
+    loadTodaySummary();
+    loadOverallStats();
+    loadMyMeals();
+    loadMyStatsChart('nutriscore');
+}
+
+function closeStatsModal() {
+    const modal = document.getElementById('statsModal');
+    if (modal) {
+        modal.remove();
+        statsModal = null;
+    }
+    if (nutritionChart) {
+        nutritionChart.destroy();
+        nutritionChart = null;
+    }
+}
+
+// resum of a day
+async function loadTodaySummary() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        
+        const allMeals = await getAllMyMeals();
+        
+        if (!allMeals || allMeals.count === 0) {
+            document.getElementById('todaySummary').innerHTML = `
+                <div class="space-y-3">
+                    <div class="text-center py-4 text-emerald-200/50">
+                        <i class="fa-solid fa-calendar-plus text-2xl mb-2"></i>
+                        <p>No meals logged today</p>
+                        <p class="text-xs mt-1">Log your first meal to start tracking!</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        // filter today
+        const todayMeals = allMeals.meals.filter(meal => meal.date === today);
+        
+        if (todayMeals.length === 0) {
+            document.getElementById('todaySummary').innerHTML = `
+                <div class="space-y-3">
+                    <div class="text-center py-4 text-emerald-200/50">
+                        <i class="fa-solid fa-calendar-day text-2xl mb-2"></i>
+                        <p>No meals logged today</p>
+                    </div>
+                    <div class="text-sm text-emerald-200/70">
+                        <i class="fa-solid fa-info-circle mr-1"></i>
+                        You have logged ${allMeals.count} meals in total
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        // today statisticks
+        const todayScores = todayMeals.map(meal => meal.nutriscore);
+        const avgScore = todayScores.length > 0 ? 
+            (todayScores.reduce((a, b) => a + b, 0) / todayScores.length).toFixed(1) : 0;
+        
+        const bestMeal = todayMeals.reduce((best, meal) => 
+            meal.nutriscore > best.nutriscore ? meal : best, todayMeals[0]);
+        
+        document.getElementById('todaySummary').innerHTML = `
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-emerald-200/70">Meals Today:</span>
+                    <span class="font-bold text-lg">${todayMeals.length}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-emerald-200/70">Avg Score:</span>
+                    <span class="font-bold text-lg ${getScoreColorClass(avgScore)}">
+                        ${avgScore}/100
+                    </span>
+                </div>
+                <div class="mt-4 pt-4 border-t border-white/10">
+                    <p class="text-sm text-emerald-200/70 mb-2">Today's Meals:</p>
+                    <div class="space-y-2 max-h-32 overflow-y-auto pr-2">
+                        ${todayMeals.map(meal => `
+                            <div class="flex justify-between items-center text-sm p-2 hover:bg-white/5 rounded">
+                                <div class="truncate flex-1 mr-2" title="${meal.meal_name}">
+                                    ${meal.meal_name}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-1 rounded text-xs ${getScoreColorClass(meal.nutriscore)}">
+                                        ${meal.nutriscore}
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('Error loading today summary:', error);
+        document.getElementById('todaySummary').innerHTML = `
+            <div class="text-center py-4 text-red-400">
+                <i class="fa-solid fa-exclamation-triangle mb-2"></i>
+                <p>Failed to load today's stats</p>
+            </div>
+        `;
+    }
+}
+
+// date statistic
+async function loadOverallStats() {
+    try {
+        const allMeals = await getAllMyMeals();
+        
+        if (!allMeals || allMeals.count === 0) {
+            document.getElementById('overallSummary').innerHTML = `
+                <div class="space-y-3">
+                    <div class="text-center py-4 text-emerald-200/50">
+                        <i class="fa-solid fa-utensils text-2xl mb-2"></i>
+                        <p>No meals logged yet</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        // Calculate estadistic
+        const scores = allMeals.meals.map(meal => meal.nutriscore);
+        const avgScore = scores.length > 0 ? 
+            (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 0;
+        
+        const bestMeal = allMeals.meals.reduce((best, meal) => 
+            meal.nutriscore > best.nutriscore ? meal : best, allMeals.meals[0]);
+        
+        const worstMeal = allMeals.meals.reduce((worst, meal) => 
+            meal.nutriscore < worst.nutriscore ? meal : worst, allMeals.meals[0]);
+        
+        // group
+        const uniqueDates = [...new Set(allMeals.meals.map(meal => meal.date))];
+        
+        document.getElementById('overallSummary').innerHTML = `
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-emerald-200/70">Total Meals:</span>
+                    <span class="font-bold">${allMeals.count}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-emerald-200/70">Days Tracked:</span>
+                    <span class="font-bold">${uniqueDates.length}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-emerald-200/70">Avg Score:</span>
+                    <span class="font-bold ${getScoreColorClass(avgScore)}">
+                        ${avgScore}/100
+                    </span>
+                </div>
+                <div class="mt-4 pt-4 border-t border-white/10">
+                    <p class="text-sm text-emerald-200/70 mb-2">Best Meal:</p>
+                    <div class="text-sm p-2 bg-emerald-500/10 rounded">
+                        <div class="font-medium">${bestMeal.meal_name}</div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-xs text-emerald-200/60">Score: ${bestMeal.nutriscore}</span>
+                            <span class="text-xs text-emerald-200/60">${bestMeal.date}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('Error loading overall stats:', error);
+        document.getElementById('overallSummary').innerHTML = `
+            <div class="text-center py-4 text-red-400">
+                <i class="fa-solid fa-exclamation-triangle mb-2"></i>
+                <p>Failed to load overall stats</p>
+            </div>
+        `;
+    }
+}
+
+// all meal
+async function getAllMyMeals() {
+    try {
+        const response = await fetch(`${API_URL}/mystats/all`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to load meals');
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error getting all meals:', error);
+        return null;
+    }
+}
+
+// list of meal of user
+async function loadMyMeals() {
+    try {
+        const allMeals = await getAllMyMeals();
+        
+        if (!allMeals || allMeals.count === 0) {
+            document.getElementById('myMealsList').innerHTML = `
+                <div class="text-center py-8 text-emerald-200/50">
+                    <i class="fa-solid fa-utensils text-2xl mb-3"></i>
+                    <p>No meals logged yet</p>
+                    <p class="text-sm mt-2">Log your first meal to start tracking!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Order by date
+        const sortedMeals = [...allMeals.meals].sort((a, b) => {
+            const dateA = a.created_at ? new Date(a.created_at) : new Date(a.date);
+            const dateB = b.created_at ? new Date(b.created_at) : new Date(b.date);
+            return dateB - dateA;
+        });
+        
+        document.getElementById('myMealsList').innerHTML = sortedMeals.map(meal => {
+            const mealDate = meal.created_at ? new Date(meal.created_at) : new Date(meal.date);
+            const formattedDate = mealDate.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+            const formattedTime = meal.created_at ? 
+                mealDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+            
+            return `
+                <div class="flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium truncate" title="${meal.meal_name}">
+                            ${meal.meal_name}
+                        </div>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-emerald-200/50">
+                                <i class="fa-solid fa-calendar mr-1"></i>${formattedDate}
+                                ${formattedTime ? ` • ${formattedTime}` : ''}
+                            </span>
+                            <span class="text-xs text-emerald-200/50">
+                                <i class="fa-solid fa-hashtag mr-1"></i>ID: ${meal.meal_id}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="px-3 py-1 rounded text-sm ${getScoreColorClass(meal.nutriscore)}">
+                        ${meal.nutriscore}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading my meals:', error);
+        document.getElementById('myMealsList').innerHTML = `
+            <div class="text-center py-8 text-red-400">
+                <i class="fa-solid fa-exclamation-triangle mb-3"></i>
+                <p>Failed to load your meals</p>
+            </div>
+        `;
+    }
+}
+
+// estadistic load 
+async function loadMyStatsChart(type = 'nutriscore') {
+    try {
+        const allMeals = await getAllMyMeals();
+        
+        if (!allMeals || allMeals.count === 0) {
+            const canvas = document.getElementById('myStatsChart');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data available. Log some meals first!', canvas.width / 2, canvas.height / 2);
+            }
+            return;
+        }
+        
+        // if no graphics
+        if (nutritionChart) {
+            nutritionChart.destroy();
+        }
+        
+        const canvas = document.getElementById('myStatsChart');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        
+        if (type === 'distribution') {
+            // Grápgics
+            const scoreRanges = {
+                'Excellent (80-100)': 0,
+                'Good (70-79)': 0,
+                'Fair (60-69)': 0,
+                'Needs Improv. (50-59)': 0,
+                'Poor (<50)': 0
+            };
+            
+            allMeals.meals.forEach(meal => {
+                const score = meal.nutriscore;
+                if (score >= 80) scoreRanges['Excellent (80-100)']++;
+                else if (score >= 70) scoreRanges['Good (70-79)']++;
+                else if (score >= 60) scoreRanges['Fair (60-69)']++;
+                else if (score >= 50) scoreRanges['Needs Improv. (50-59)']++;
+                else scoreRanges['Poor (<50)']++;
+            });
+            
+            const colors = [
+                'rgba(16, 185, 129, 0.7)',  // Emerald
+                'rgba(34, 211, 238, 0.7)',  // Cyan
+                'rgba(245, 158, 11, 0.7)',  // Amber
+                'rgba(249, 115, 22, 0.7)',  // Orange
+                'rgba(239, 68, 68, 0.7)'    // Red
+            ];
+            
+            nutritionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(scoreRanges),
+                    datasets: [{
+                        data: Object.values(scoreRanges),
+                        backgroundColor: colors,
+                        borderColor: colors.map(color => color.replace('0.7', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white'
+                        }
+                    }
+                }
+            });
+            
+        } else {
+            // Graphic
+            const mealsByDate = {};
+            allMeals.meals.forEach(meal => {
+                const date = meal.date;
+                if (!mealsByDate[date]) {
+                    mealsByDate[date] = [];
+                }
+                mealsByDate[date].push(meal.nutriscore);
+            });
+            
+            // Order
+            const sortedDates = Object.keys(mealsByDate).sort();
+            const labels = sortedDates.map(date => {
+                const d = new Date(date);
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            });
+            
+            const data = sortedDates.map(date => {
+                const scores = mealsByDate[date];
+                return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+            });
+            
+            nutritionChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Daily Average Score',
+                        data: data,
+                        borderColor: 'rgba(16, 185, 129, 0.8)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+                        pointBorderColor: 'white',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'rgba(255, 255, 255, 0.8)'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            callbacks: {
+                                label: function(context) {
+                                    return `Score: ${context.parsed.y}/100`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 0,
+                            max: 100,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                callback: function(value) {
+                                    return value + '/100';
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error loading chart:', error);
+    }
+}
+
+// new meal
+async function logMealToMyDay() {
+    const mealId = document.getElementById('logMealId').value;
+    const mealName = document.getElementById('logMealName').value;
+    
+    if (!mealId) {
+        showNotification('Error', 'Please enter a meal ID', 'error');
+        return;
+    }
+    
+    try {
+        showNotification('Logging', 'Adding meal to your day...', 'info');
+        
+        const response = await fetch(`${API_URL}/mystats/add-meal?meal_id=${mealId}`, {
+            method: 'POST',
+            headers: { 
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to log meal');
+        }
+        
+        const data = await response.json();
+        
+        // clean
+        document.getElementById('logMealId').value = '';
+        document.getElementById('logMealName').value = '';
+        
+        // data recargary
+        loadTodaySummary();
+        loadOverallStats();
+        loadMyMeals();
+        loadMyStatsChart('nutriscore');
+        
+        showNotification('Success', `Added "${data.meal}" to your day! Score: ${data.nutriscore}`, 'success');
+        
+    } catch (error) {
+        console.error('Error logging meal:', error);
+        showNotification('Error', error.message, 'error');
+    }
+}
+
+// clean all meal
+async function clearAllMeals() {
+    if (!confirm('Are you sure you want to clear ALL your meal history? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        showNotification('Clearing', 'Removing all your meal history...', 'info');
+        
+        const response = await fetch(`${API_URL}/mystats/clear-all`, {
+            method: 'DELETE',
+            headers: { 
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to clear meals');
+        }
+        
+        const data = await response.json();
+        
+
+        loadTodaySummary();
+        loadOverallStats();
+        loadMyMeals();
+        loadMyStatsChart('nutriscore');
+        
+        showNotification('Cleared', `Successfully deleted ${data.deleted_count} meal logs`, 'success');
+        
+    } catch (error) {
+        console.error('Error clearing all meals:', error);
+        showNotification('Error', error.message, 'error');
+    }
+}
+
+function updateMealResultsWithAddButton() {
+    const mealCards = document.querySelectorAll('#mealResults .glass');
+    
+    mealCards.forEach(card => {
+        // find ID of a meal
+        const idElement = card.querySelector('[class*="fa-hashtag"]');
+        if (idElement) {
+            const text = idElement.textContent;
+            const idMatch = text.match(/ID:\s*(\d+)/);
+            if (idMatch) {
+                const mealId = idMatch[1];
+                const nameElement = card.querySelector('.font-bold.text-lg');
+                const mealName = nameElement ? nameElement.textContent : `Meal ${mealId}`;
+                
+                //"Add to My Day"
+                const buttonContainer = card.querySelector('.text-right');
+                if (buttonContainer) {
+                    const addButton = document.createElement('button');
+                    addButton.className = 'glass px-3 py-1 rounded text-sm hover:bg-purple-500/20 transition ml-2';
+                    addButton.innerHTML = '<i class="fa-solid fa-plus mr-1"></i>Add to My Day';
+                    addButton.onclick = (e) => {
+                        e.stopPropagation();
+                        addMealToMyDayFromCard(mealId, mealName);
+                    };
+                    buttonContainer.appendChild(addButton);
+                }
+            }
+        }
+    });
+}
+
+async function addMealToMyDayFromCard(mealId, mealName) {
+    try {
+        showNotification('Adding', `Adding "${mealName}" to your day...`, 'info');
+        
+        const response = await fetch(`${API_URL}/mystats/add-meal?meal_id=${mealId}`, {
+            method: 'POST',
+            headers: { 
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to add meal');
+        }
+        
+        const data = await response.json();
+        
+        showNotification('Success', `Added "${data.meal}" to your day! Score: ${data.nutriscore}`, 'success');
+        
+    } catch (error) {
+        console.error('Error adding meal from card:', error);
+        showNotification('Error', error.message, 'error');
+    }
+}
+
+// call updateMealResultsWithAddButton after displayMealResults
+const originalDisplayMealResults = displayMealResults;
+displayMealResults = function(meals) {
+    originalDisplayMealResults(meals);
+    setTimeout(updateMealResultsWithAddButton, 100);
+};
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeStatsModal();
+    }
+});
+
+function getScoreColorClass(score) {
+    if (score >= 80) return 'text-emerald-400';
+    if (score >= 70) return 'text-emerald-300';
+    if (score >= 60) return 'text-yellow-400';
+    if (score >= 50) return 'text-orange-400';
+    return 'text-red-400';
+}
+
 
 // ====================
 // UTILITY FUNCTIONS
 // ====================
-function getUserStats() {
-    showNotification('Stats Coming Soon', 'User statistics dashboard will be added soon!', 'info');
-}
 
 function showFeatureInfo() {
     showNotification('How It Works', 'Explore 4 features: Health Map, Meal Builder, Comparison, and Nutrient Filters', 'info');

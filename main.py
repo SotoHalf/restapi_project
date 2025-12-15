@@ -17,7 +17,7 @@ from pathlib import Path
 import certifi
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from routers import auth_routes, protected_routes, health_map, versus, filters, meal_builder
+from routers import auth_routes, protected_routes, health_map, versus, filters, meal_builder, mystats
 
 def print_time():
     """job to print time every minute."""
@@ -87,8 +87,7 @@ app.include_router(health_map.router)
 app.include_router(versus.router)
 app.include_router(filters.router)
 app.include_router(meal_builder.router)
-
-
+app.include_router(mystats.router)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
