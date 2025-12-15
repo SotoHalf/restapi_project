@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from database import db_manager
 import utils.auth as auth
 from datetime import datetime, date
+from utils.meal_functions import extract_grams, calculate_meal_nutriscore
 import re
 
 router = APIRouter(prefix="/mystats", tags=["My Stats"])
@@ -10,29 +11,6 @@ router = APIRouter(prefix="/mystats", tags=["My Stats"])
 # =========================================================
 # REUTILIZAMOS LA MISMA LÓGICA QUE EN /versus
 # =========================================================
-
-def extract_grams(measure) -> float | None:
-    if not measure:
-        return None
-
-    if isinstance(measure, (int, float)):
-        return float(measure)
-
-    match = re.search(r"(\d+(\.\d+)?)", str(measure))
-    if not match:
-        return None
-
-    return float(match.group(1))
-
-
-def calculate_meal_nutriscore(nutrients: dict) -> float:
-    score = (
-        nutrients["proteins"] * 5
-        - nutrients["fat"] * 2
-        - nutrients["salt"] * 3
-        - (nutrients["energy_kcal"] * 0.05)
-    )
-    return round(max(1, min(100, score)), 2)
 
 
 async def calculate_meal(meal_id: int) -> dict | None:
