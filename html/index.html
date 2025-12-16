@@ -470,47 +470,6 @@ body::before {
 </div>
 
 <script>
-  const API_URL = "https://restapi-udl-nutriscore.onrender.com";
-
-  const token = localStorage.getItem("access_token");
-
-  console.log("API_URL:", API_URL);
-  console.log("Token:", token);
-
-  async function testUser() {
-    if (!token) {
-      console.warn("No token found in localStorage.");
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/users/me`, {
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }
-      });
-
-      console.log("Status:", response.status);
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.error("Response body:", text);
-        return;
-      }
-
-      const user = await response.json();
-      console.log("User data:", user);
-
-    } catch (err) {
-      console.error("Fetch error:", err);
-    }
-  }
-
-  testUser();
-</script>
-
-<script>
   // Tabs
   const loginTab = document.getElementById('loginTab');
   const registerTab = document.getElementById('registerTab');

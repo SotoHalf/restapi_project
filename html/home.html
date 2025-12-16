@@ -680,7 +680,7 @@ body {
 const API_URL =
   window.location.hostname === "localhost"
     ? "http://127.0.0.1:8000"
-    : "https://restapi-udl-nutriscore.onrender.com/";
+    : "https://restapi-udl-nutriscore.onrender.com";
 let CURRENT_USER = null;
 let map = null;
 let healthMapData = null;
@@ -689,7 +689,6 @@ let healthMapData = null;
 // AUTH & INITIALIZATION
 // ====================
 const token = localStorage.getItem("access_token");
-console.log(API_URL)
 if (!token) {
     window.location.href = "/";
 }
