@@ -77,7 +77,7 @@ pip install -r requirements.txt
 Create a `.env` file with:
 
 ```env
-MONGO_URL="mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority"
+MONGODB_URI=="mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority"
 DB_NAME="your_database_name"
 SECRET_KEY="your_super_secret_key"
 ```
