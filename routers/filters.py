@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from database import db_manager
 import utils.auth as auth
-from utils.meal_functions import calculate_meal_from_docs  # importas las funciones de meal_functions
+from utils.meal_functions import calculate_meal_from_docs  # import functions from meal_functions
 
 router = APIRouter(prefix="/filters", tags=["Nutrient Filters"])
 

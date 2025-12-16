@@ -7,12 +7,6 @@ import re
 
 router = APIRouter(prefix="/mystats", tags=["My Stats"])
 
-
-# =========================================================
-# SAME LOGIC AS VERSUS
-# =========================================================
-
-
 async def calculate_meal(meal_id: int) -> dict | None:
     meals_col = db_manager.db["themealdb_clean"]
     products_col = db_manager.db["openfoodfacts_clean"]
@@ -66,7 +60,7 @@ async def calculate_meal(meal_id: int) -> dict | None:
 
 
 # =========================================================
-# ENDPOINT 1️⃣ AÑADIR COMIDA DEL USUARIO
+# ADD FOOD FOR A USER
 # =========================================================
 
 @router.post("/add-meal")
@@ -147,13 +141,13 @@ async def clear_all_meals(
     mystats_col = db_manager.db["mystats"]
     user_id = get_user_id(current_user)
     
-    # Primero contar cuántas comidas hay
+    # Count n0 of meals
     meal_count = await mystats_col.count_documents({"user_id": user_id})
     
     if meal_count == 0:
         raise HTTPException(status_code=404, detail="No meals found to delete")
     
-    # Eliminar todas las comidas del usuario
+    # Delete user's meals
     result = await mystats_col.delete_many({"user_id": user_id})
     
     if result.deleted_count > 0:
