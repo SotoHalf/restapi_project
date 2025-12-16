@@ -677,7 +677,10 @@ body {
 // ====================
 // CONFIGURATION
 // ====================
-const API_URL = "http://127.0.0.1:8000";
+const API_URL =
+  window.location.hostname === "localhost"
+    ? "http://127.0.0.1:8000"
+    : "https://restapi-udl-nutriscore.onrender.com/";
 let CURRENT_USER = null;
 let map = null;
 let healthMapData = null;
